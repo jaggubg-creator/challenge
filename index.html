@@ -8,19 +8,93 @@
 <meta name="theme-color" content="#0F0E11"/>
 <title>21-Day Challenge</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  body{background:#0F0E11;color:#F5F0E8;font-family:Georgia,serif;min-height:100vh}
-  input,textarea,button{font-family:Georgia,serif}
-  input[type=number]::-webkit-inner-spin-button{opacity:1}
-  @keyframes pop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-  .day-btn:active{transform:scale(0.96)!important}
-  .ripple{transition:all 0.18s ease}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#0F0E11;color:#F5F0E8;font-family:Georgia,serif;min-height:100vh}
+input,textarea,button{font-family:Georgia,serif}
+@keyframes pop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.day-btn:active{opacity:0.8}
+
+/* Activity card */
+.act-card{border-radius:12px;padding:16px;margin-bottom:12px;transition:border-color 0.3s,background 0.3s}
+
+/* Input styling */
+.num-input{width:100%;background:#0F0E11;border-radius:8px;color:#F5F0E8;
+  padding:9px 12px;font-size:16px;outline:none;font-family:Georgia,serif;
+  border:1px solid #3a3550;transition:border-color 0.3s}
+.num-input:focus{border-color:#7B5EA7}
+
+/* Progress bar */
+.bar-wrap{background:#2a2535;border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px}
+.bar-fill{height:100%;border-radius:4px;transition:width 0.4s ease,background 0.3s}
+
+/* Note area */
+.note-area{background:#0F0E11;border:1px dashed #2a2535;border-radius:8px;
+  padding:9px 11px;min-height:36px;font-size:13px;line-height:1.5;cursor:text;
+  color:#4a4560;font-style:italic}
+.note-area.has-note{color:#C8C0D8;font-style:normal}
+.note-ta{width:100%;background:#0F0E11;border:1px solid #3a3550;border-radius:8px;
+  color:#F5F0E8;padding:9px 11px;font-size:13px;resize:none;height:68px;
+  outline:none;font-family:Georgia,serif}
+
+/* Check button */
+.check-btn{width:30px;height:30px;border-radius:50%;flex-shrink:0;cursor:pointer;
+  border:2px solid #3a3550;background:transparent;color:#fff;font-size:15px;
+  display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+
+/* Small buttons */
+.sm-btn{border:none;border-radius:6px;color:#fff;padding:6px 14px;font-size:12px;cursor:pointer}
+
+/* Celebration overlay */
+#celebration{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100;
+  display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:16px;text-align:center;padding:24px}
+#celebration.show{display:flex}
+
+/* Day grid */
+#day-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
+.day-card{border-radius:12px;padding:12px 6px;cursor:pointer;color:#F5F0E8;
+  text-align:center;border:2px solid #2a2535;background:#1a1825;width:100%;transition:all 0.18s}
 </style>
 </head>
 <body>
 
-<div id="app"></div>
+<!-- Celebration -->
+<div id="celebration">
+  <div style="font-size:64px;animation:pop 0.4s ease">🎉</div>
+  <div style="font-size:26px;font-weight:bold">Perfect Day!</div>
+  <div style="font-size:15px;color:#C8C0D8;max-width:300px;line-height:1.6">Every goal crushed today. You're unstoppable! 🔥</div>
+  <button onclick="hideCelebration()" style="background:#7B5EA7;border:none;border-radius:10px;color:#fff;padding:12px 28px;font-size:15px;cursor:pointer;margin-top:8px">Onwards! 💪</button>
+</div>
+
+<!-- Header -->
+<div style="background:linear-gradient(135deg,#1a1625,#0f1a2e);border-bottom:1px solid #2a2535;padding:28px 20px 24px;text-align:center;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(123,94,167,0.18) 0%,transparent 70%)"></div>
+  <div style="position:relative;z-index:1">
+    <div style="font-size:10px;letter-spacing:4px;color:#7B5EA7;text-transform:uppercase;margin-bottom:6px">24 FEB – 16 MAR 2026</div>
+    <h1 style="font-size:clamp(24px,6vw,38px);font-weight:normal;margin:0 0 4px;letter-spacing:-1px">21-Day Challenge</h1>
+    <p style="color:#6B6180;font-size:13px;margin:0 0 18px">Mind · Read · Screen · Rise · Steps</p>
+    <div style="background:rgba(123,94,167,0.1);border:1px solid rgba(123,94,167,0.25);border-radius:12px;padding:12px 16px;max-width:480px;margin:0 auto 20px;font-size:13px;color:#D4CCE8;line-height:1.6;font-style:italic">
+      <span id="day-label" style="color:#7B5EA7;font-style:normal;font-weight:bold;font-size:10px;letter-spacing:2px;display:block;margin-bottom:5px"></span>
+      <span id="day-msg"></span>
+    </div>
+    <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="text-align:center"><div id="stat-pct" style="font-size:clamp(18px,4vw,26px);font-weight:bold">0%</div><div style="font-size:10px;color:#6B6180;letter-spacing:2px;text-transform:uppercase">Progress</div></div>
+      <div style="text-align:center"><div id="stat-done" style="font-size:clamp(18px,4vw,26px);font-weight:bold">0/105</div><div style="font-size:10px;color:#6B6180;letter-spacing:2px;text-transform:uppercase">Done</div></div>
+      <div style="text-align:center"><div id="stat-perfect" style="font-size:clamp(18px,4vw,26px);font-weight:bold">0</div><div style="font-size:10px;color:#6B6180;letter-spacing:2px;text-transform:uppercase">Perfect</div></div>
+    </div>
+    <div style="background:#2a2535;border-radius:4px;height:4px;max-width:360px;margin:0 auto">
+      <div id="main-bar" style="height:100%;border-radius:4px;background:linear-gradient(90deg,#7B5EA7,#27AE60);width:0%;transition:width 0.5s"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div style="padding:20px 16px;max-width:860px;margin:0 auto">
+  <div id="day-grid"></div>
+  <div id="detail-panel"></div>
+  <div style="margin-top:20px;display:flex;justify-content:center;gap:14px;flex-wrap:wrap" id="legend"></div>
+</div>
 
 <script>
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -29,318 +103,341 @@ const START_DATE  = new Date('2026-02-24');
 const TOTAL_DAYS  = 21;
 
 const ACTIVITIES = [
-  {id:'mindfulness',label:'Meditation',        icon:'🧘',color:'#7B5EA7',type:'number',goal:20,  unit:'mins', max:120,  goalType:'over'},
-  {id:'reading',    label:'Reading',           icon:'📚',color:'#2E86AB',type:'number',goal:30,  unit:'pages',max:200,  goalType:'over'},
-  {id:'screentime', label:'Screen Time',       icon:'📵',color:'#E63946',type:'number',goal:120, unit:'mins', max:480,  goalType:'under'},
-  {id:'wakeup',     label:'Wake Up by 6 AM',   icon:'🌅',color:'#F4A261',type:'check'},
-  {id:'steps',      label:'6,000 Steps',       icon:'👟',color:'#27AE60',type:'number',goal:6000,unit:'steps',max:20000,goalType:'over'},
+  {id:'mindfulness',label:'Meditation',       icon:'🧘',color:'#7B5EA7',type:'number',goal:20,  unit:'mins', max:120,  goalType:'over'},
+  {id:'reading',    label:'Reading',          icon:'📚',color:'#2E86AB',type:'number',goal:30,  unit:'pages',max:200,  goalType:'over'},
+  {id:'screentime', label:'Screen Time',      icon:'📵',color:'#E63946',type:'number',goal:120, unit:'mins', max:480,  goalType:'under'},
+  {id:'wakeup',     label:'Wake Up by 6 AM',  icon:'🌅',color:'#F4A261',type:'check'},
+  {id:'steps',      label:'6,000 Steps',      icon:'👟',color:'#27AE60',type:'number',goal:6000,unit:'steps',max:20000,goalType:'over'},
 ];
 
 const MESSAGES = {
-  1:'Every journey begins with a single step. You\'ve taken yours — welcome to Day 1! 🌱',
-  2:'Two days in! Momentum is quietly building. Keep showing up. 💪',
-  3:'Day 3 is where many quit. You\'re still here — that sets you apart. 🔥',
-  4:'Four days strong! Your future self is already grateful for today.',
-  5:'Day 5 — almost a week! Small habits compound into massive change. 🚀',
-  6:'Six days of discipline. You\'re rewriting your identity one choice at a time.',
-  7:'One full week done! 🎉 You\'ve proven you can do this. Now go deeper.',
-  8:'Week 2 begins. The excitement may fade — but your commitment doesn\'t have to.',
-  9:'Day 9 — the grind phase. Champions are made when no one is watching. 👑',
-  10:'Double digits! You\'re nearly halfway. The finish line is closer than you think.',
-  11:'Day 11 — you\'re more than halfway to a new habit. Keep the streak alive!',
-  12:'Day 12. You\'re not just doing a challenge — you\'re becoming someone new. ✨',
-  13:'Lucky 13! Consistency is a superpower most people underestimate. You have it.',
-  14:'Two full weeks! 🏆 Look back at Day 1 — feel how far you\'ve come.',
-  15:'Day 15 — the final stretch begins. You\'ve earned every bit of this progress.',
-  16:'Day 16. The person who started this is not the same person finishing it. 🦋',
-  17:'Five days left. You didn\'t come this far to only come this far. Push! 💥',
-  18:'Day 18 — almost there. Breathe, trust the process, keep your eyes on the goal.',
-  19:'Day 19! Two more days to a transformation. You are so close. 🌟',
-  20:'Day 20 — the final countdown. Tomorrow is the last day. Make it count! ⚡',
-  21:'Day 21 — THE FINAL DAY! 🎊 You did it. This is not the end — it\'s who you are now. 🏅',
+  1:"Every journey begins with a single step. You've taken yours — welcome to Day 1! 🌱",
+  2:"Two days in! Momentum is quietly building. Keep showing up. 💪",
+  3:"Day 3 is where many quit. You're still here — that sets you apart. 🔥",
+  4:"Four days strong! Your future self is already grateful for today.",
+  5:"Day 5 — almost a week! Small habits compound into massive change. 🚀",
+  6:"Six days of discipline. You're rewriting your identity one choice at a time.",
+  7:"One full week done! 🎉 You've proven you can do this. Now go deeper.",
+  8:"Week 2 begins. The excitement may fade — but your commitment doesn't have to.",
+  9:"Day 9 — the grind phase. Champions are made when no one is watching. 👑",
+  10:"Double digits! You're nearly halfway. The finish line is closer than you think.",
+  11:"Day 11 — you're more than halfway to a new habit. Keep the streak alive!",
+  12:"Day 12. You're not just doing a challenge — you're becoming someone new. ✨",
+  13:"Lucky 13! Consistency is a superpower most people underestimate. You have it.",
+  14:"Two full weeks! 🏆 Look back at Day 1 — feel how far you've come.",
+  15:"Day 15 — the final stretch begins. You've earned every bit of this progress.",
+  16:"Day 16. The person who started this is not the same person finishing it. 🦋",
+  17:"Five days left. You didn't come this far to only come this far. Push! 💥",
+  18:"Day 18 — almost there. Breathe, trust the process, keep your eyes on the goal.",
+  19:"Day 19! Two more days to a transformation. You are so close. 🌟",
+  20:"Day 20 — the final countdown. Tomorrow is the last day. Make it count! ⚡",
+  21:"Day 21 — THE FINAL DAY! 🎊 You did it. This is not the end — it's who you are now. 🏅",
 };
 
 // ── Storage ──────────────────────────────────────────────────────────────────
-function load() {
+function loadData() {
   try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
 }
-function save(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function blankDay() {
-  return Object.fromEntries(ACTIVITIES.map(a => [a.id, {done:false, note:'', value:''}]));
-}
-function initDays() {
-  const saved = load();
-  const d = {};
-  for (let i = 1; i <= TOTAL_DAYS; i++) {
-    d[i] = {...blankDay(), ...(saved && saved[i] ? saved[i] : {})};
-  }
-  return d;
-}
-function getToday() {
-  const t = new Date(); t.setHours(0,0,0,0);
-  const s = new Date(START_DATE); s.setHours(0,0,0,0);
-  return Math.min(Math.max(Math.floor((t-s)/864e5)+1, 1), TOTAL_DAYS);
-}
-function dayLabel(n) {
-  const d = new Date(START_DATE); d.setDate(d.getDate()+n-1);
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+let saveTimer = null;
+function schedSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(days)); } catch {}
+  }, 400);
 }
 
 // ── State ────────────────────────────────────────────────────────────────────
-let state = {
-  days: initDays(),
-  activeDay: null,
-  editNote: null,   // {day, actId}
-  celebration: false,
-};
-let saveTimer = null;
+function blankDay() { return Object.fromEntries(ACTIVITIES.map(a=>[a.id,{done:false,note:'',value:''}])); }
 
-function setState(patch) {
-  Object.assign(state, patch);
-  if (patch.days) {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => save(state.days), 300);
+const saved = loadData();
+const days  = {};
+for (let i = 1; i <= TOTAL_DAYS; i++) {
+  days[i] = {...blankDay(), ...(saved && saved[i] ? saved[i] : {})};
+}
+
+let activeDay  = null;
+let editingNote = null; // actId string or null
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function getToday() {
+  const t=new Date(); t.setHours(0,0,0,0);
+  const s=new Date(START_DATE); s.setHours(0,0,0,0);
+  return Math.min(Math.max(Math.floor((t-s)/864e5)+1,1),TOTAL_DAYS);
+}
+function dayLabel(n) {
+  const d=new Date(START_DATE); d.setDate(d.getDate()+n-1);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function completion(day) { return ACTIVITIES.filter(a=>days[day][a.id].done).length; }
+function totalDone() { let c=0; for(let i=1;i<=TOTAL_DAYS;i++) ACTIVITIES.forEach(a=>{if(days[i][a.id].done)c++;}); return c; }
+function perfectDays() { let c=0; for(let i=1;i<=TOTAL_DAYS;i++) if(completion(i)===ACTIVITIES.length)c++; return c; }
+
+// ── Targeted DOM updates (no full re-render) ─────────────────────────────────
+
+function updateHeader() {
+  const today = getToday();
+  const done  = totalDone();
+  const total = TOTAL_DAYS * ACTIVITIES.length;
+  const pct   = Math.round((done/total)*100);
+  document.getElementById('day-label').textContent = `DAY ${today} · ${dayLabel(today).toUpperCase()}`;
+  document.getElementById('day-msg').textContent   = MESSAGES[today];
+  document.getElementById('stat-pct').textContent  = pct+'%';
+  document.getElementById('stat-done').textContent = done+'/'+total;
+  document.getElementById('stat-perfect').textContent = perfectDays();
+  document.getElementById('main-bar').style.width  = pct+'%';
+}
+
+function updateDayCard(day) {
+  const el = document.getElementById('day-'+day);
+  if (!el) return;
+  const today = getToday();
+  const done  = completion(day);
+  const full  = done === ACTIVITIES.length;
+  const isActive = activeDay === day;
+  const isToday  = day === today;
+  el.style.background = isActive ? 'linear-gradient(135deg,#2a1f45,#1a2a3a)' : full ? '#1e1535' : '#1a1825';
+  el.style.borderColor = isActive ? '#7B5EA7' : isToday ? '#F4A261' : full ? 'rgba(123,94,167,0.4)' : '#2a2535';
+  el.style.transform   = isActive ? 'scale(1.06)' : 'scale(1)';
+  // update dots
+  const dotWrap = el.querySelector('.dots');
+  if (dotWrap) {
+    ACTIVITIES.forEach((a,i) => { dotWrap.children[i].style.background = days[day][a.id].done ? a.color : '#2a2535'; });
   }
-  render();
+  const star = el.querySelector('.star');
+  if (star) star.style.display = full ? 'block' : 'none';
 }
 
-function updateActivity(day, actId, patch) {
-  const days = JSON.parse(JSON.stringify(state.days));
-  days[day][actId] = {...days[day][actId], ...patch};
-  const allDone = ACTIVITIES.every(a => days[day][a.id].done);
-  setState({days});
-  if (allDone) {
-    setState({celebration: true});
-    setTimeout(() => setState({celebration: false}), 3500);
+function updateActivityCard(actId) {
+  const day = activeDay;
+  if (!day) return;
+  const act = ACTIVITIES.find(a=>a.id===actId);
+  const d   = days[day][actId];
+  const card = document.getElementById('card-'+actId);
+  if (!card) return;
+
+  card.style.background   = d.done ? 'rgba(255,255,255,0.03)' : '#0f0e11';
+  card.style.borderColor  = d.done ? act.color+'55' : '#2a2535';
+
+  if (act.type === 'check') {
+    const btn = card.querySelector('.check-btn');
+    if (btn) {
+      btn.style.background   = d.done ? act.color : 'transparent';
+      btn.style.borderColor  = d.done ? act.color : '#3a3550';
+      btn.textContent        = d.done ? '✓' : '';
+    }
+    return;
+  }
+
+  // Update input border
+  const inp = card.querySelector('.num-input');
+  const n   = parseInt(d.value);
+  const met = d.value !== '' && !isNaN(n) && (act.goalType==='over' ? n>=act.goal : n<=act.goal);
+  if (inp) inp.style.borderColor = met ? act.color : '#3a3550';
+
+  // Update bar
+  const bar = card.querySelector('.bar-fill');
+  const pct = d.value ? Math.min(100, Math.round((n/act.max)*100)) : 0;
+  if (bar) {
+    bar.style.width      = Math.min(pct,100)+'%';
+    bar.style.background = met ? act.color : (act.goalType==='under' ? '#E63946' : '#3a3550');
+  }
+
+  // Update labels
+  const left  = card.querySelector('.bar-left');
+  const right = card.querySelector('.bar-right');
+  if (left)  left.textContent  = d.value !== '' && !isNaN(n) ? n.toLocaleString()+' '+act.unit : '—';
+  if (right) right.style.color = met ? act.color : '#6B6180';
+
+  // Emoji
+  const emo = card.querySelector('.met-emoji');
+  if (emo) emo.style.display = met ? 'inline' : 'none';
+}
+
+// ── Render (initial full render only) ────────────────────────────────────────
+function renderGrid() {
+  const today = getToday();
+  const grid  = document.getElementById('day-grid');
+  grid.innerHTML = '';
+  for (let day = 1; day <= TOTAL_DAYS; day++) {
+    const done   = completion(day);
+    const full   = done === ACTIVITIES.length;
+    const isToday = day === today;
+    const btn = document.createElement('button');
+    btn.className   = 'day-btn day-card';
+    btn.id          = 'day-'+day;
+    btn.onclick     = () => onDayClick(day);
+    btn.innerHTML   = `
+      <div style="font-size:9px;color:${isToday?'#F4A261':'#5a5575'};letter-spacing:1px;margin-bottom:3px">${isToday?'TODAY':dayLabel(day)}</div>
+      <div style="font-size:19px;font-weight:bold;line-height:1">${day}</div>
+      <div class="dots" style="margin-top:7px;display:flex;justify-content:center;gap:2px;flex-wrap:wrap">
+        ${ACTIVITIES.map(a=>`<div style="width:5px;height:5px;border-radius:50%;background:${days[day][a.id].done?a.color:'#2a2535'}"></div>`).join('')}
+      </div>
+      <div class="star" style="font-size:12px;margin-top:4px;display:${full?'block':'none'}">✨</div>`;
+    grid.appendChild(btn);
   }
 }
 
-// ── Render Helpers ───────────────────────────────────────────────────────────
-function completion(day) {
-  return ACTIVITIES.filter(a => state.days[day][a.id].done).length;
-}
-function totalDone() {
-  let c = 0;
-  for (let i = 1; i <= TOTAL_DAYS; i++) ACTIVITIES.forEach(a => { if (state.days[i][a.id].done) c++; });
-  return c;
-}
-function perfectDays() {
-  let c = 0;
-  for (let i = 1; i <= TOTAL_DAYS; i++) if (completion(i) === ACTIVITIES.length) c++;
-  return c;
+function renderLegend() {
+  document.getElementById('legend').innerHTML = ACTIVITIES.map(a=>`
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#6B6180">
+      <div style="width:7px;height:7px;border-radius:50%;background:${a.color}"></div>${a.label}
+    </div>`).join('');
 }
 
-// ── HTML Builders ────────────────────────────────────────────────────────────
-function inputBar(act, value, day) {
-  const n = parseInt(value);
-  const met = value !== '' && !isNaN(n) && (act.goalType === 'over' ? n >= act.goal : n <= act.goal);
-  const pct = value ? Math.min(100, Math.round((n / act.max) * 100)) : 0;
-  const barColor = met ? act.color : (act.goalType === 'under' ? '#E63946' : '#3a3550');
-  return `
-    <div style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <input type="number" value="${value}" min="0" max="${act.max}"
-          placeholder="Enter ${act.unit}"
-          oninput="onValueInput(${day},'${act.id}',this.value)"
-          style="flex:1;background:#0F0E11;border:1px solid ${met ? act.color : '#3a3550'};
-            border-radius:8px;color:#F5F0E8;padding:9px 12px;font-size:15px;outline:none;width:100%"/>
-        <span style="font-size:12px;color:#6B6180;white-space:nowrap">${act.unit}</span>
-        ${met ? '<span style="font-size:18px">✅</span>' : ''}
+function renderDetail() {
+  const panel = document.getElementById('detail-panel');
+  if (!activeDay) { panel.innerHTML = ''; return; }
+  const day = activeDay;
+  panel.innerHTML = `
+    <div style="margin-top:20px;background:#1a1825;border:1px solid #2a2535;border-radius:16px;overflow:hidden;animation:fadeUp 0.2s ease">
+      <div style="padding:18px 20px 14px;border-bottom:1px solid #2a2535;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:10px;letter-spacing:3px;color:#6B6180;text-transform:uppercase">${day===getToday()?'Today':dayLabel(day)}</div>
+          <div style="font-size:20px;font-weight:bold">Day ${day}</div>
+        </div>
+        <button onclick="onCloseDetail()" style="background:#2a2535;border:none;border-radius:8px;color:#8A8096;cursor:pointer;padding:7px 12px;font-size:13px">✕</button>
       </div>
-      <div style="background:#2a2535;border-radius:4px;height:6px;overflow:hidden">
-        <div style="height:100%;border-radius:4px;background:${barColor};width:${Math.min(pct,100)}%;transition:width 0.4s ease"></div>
+      <div style="margin:14px 20px 0;background:rgba(123,94,167,0.07);border:1px solid rgba(123,94,167,0.18);border-radius:10px;padding:11px 14px;font-size:13px;color:#C8C0D8;font-style:italic;line-height:1.6">
+        ${MESSAGES[day]}
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:4px">
-        <span style="font-size:11px;color:#6B6180">${value !== '' && !isNaN(n) ? n.toLocaleString()+' '+act.unit : '—'}</span>
-        <span style="font-size:11px;color:${met ? act.color : '#6B6180'}">${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</span>
+      <div style="padding:14px 20px 20px" id="cards-wrap">
+        ${ACTIVITIES.map(a=>renderCard(a,day)).join('')}
       </div>
     </div>`;
 }
 
-function activityCard(act, day) {
-  const d = state.days[day][act.id];
-  const isEditing = state.editNote && state.editNote.day === day && state.editNote.actId === act.id;
+function renderCard(act, day) {
+  const d   = days[day][act.id];
+  const n   = parseInt(d.value);
+  const met = d.value !== '' && !isNaN(n) && (act.goalType==='over' ? n>=act.goal : n<=act.goal);
+  const pct = d.value ? Math.min(100, Math.round((n/act.max)*100)) : 0;
+  const isEditing = editingNote === act.id;
   return `
-    <div style="background:${d.done ? 'rgba(255,255,255,0.03)' : '#0f0e11'};
-      border:1px solid ${d.done ? act.color+'55' : '#2a2535'};
-      border-radius:12px;padding:16px;transition:all 0.2s;margin-bottom:12px">
+    <div class="act-card" id="card-${act.id}"
+      style="background:${d.done?'rgba(255,255,255,0.03)':'#0f0e11'};border:1px solid ${d.done?act.color+'55':'#2a2535'}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="font-size:22px">${act.icon}</span>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:bold">${act.label}</div>
-          ${act.type !== 'check' ? `<div style="font-size:11px;color:#6B6180">Goal: ${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</div>` : ''}
+          ${act.type!=='check'?`<div style="font-size:11px;color:#6B6180">Goal: ${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</div>`:''}
         </div>
-        ${act.type === 'check' ? `
-          <button onclick="onCheck(${day},'${act.id}')"
-            style="width:30px;height:30px;border-radius:50%;flex-shrink:0;cursor:pointer;
-              border:2px solid ${d.done ? act.color : '#3a3550'};
-              background:${d.done ? act.color : 'transparent'};
-              color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">
-            ${d.done ? '✓' : ''}
-          </button>` : ''}
+        ${act.type==='check'?`
+          <button class="check-btn" onclick="onCheck('${act.id}')"
+            style="background:${d.done?act.color:'transparent'};border-color:${d.done?act.color:'#3a3550'}">
+            ${d.done?'✓':''}
+          </button>`:''}
       </div>
-      ${act.type !== 'check' ? inputBar(act, d.value, day) : ''}
-      ${isEditing ? `
-        <textarea id="note-ta-${act.id}" autofocus
-          placeholder="Add a note..."
-          style="width:100%;background:#0F0E11;border:1px solid #3a3550;border-radius:8px;
-            color:#F5F0E8;padding:9px 11px;font-size:13px;resize:none;height:68px;outline:none"
-        >${d.note}</textarea>
+      ${act.type!=='check'?`
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <input class="num-input" type="number" inputmode="numeric"
+            value="${d.value}" min="0" max="${act.max}"
+            placeholder="Enter ${act.unit}"
+            style="border-color:${met?act.color:'#3a3550'}"
+            onchange="onValChange('${act.id}',this.value)"
+            onblur="onValChange('${act.id}',this.value)"/>
+          <span style="font-size:12px;color:#6B6180;white-space:nowrap">${act.unit}</span>
+          <span class="met-emoji" style="font-size:18px;display:${met?'inline':'none'}">✅</span>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(pct,100)}%;background:${met?act.color:act.goalType==='under'?'#E63946':'#3a3550'}"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+          <span class="bar-left" style="font-size:11px;color:#6B6180">${d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—'}</span>
+          <span class="bar-right" style="font-size:11px;color:${met?act.color:'#6B6180'}">${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</span>
+        </div>`:''}
+      ${isEditing?`
+        <textarea class="note-ta" id="note-ta-${act.id}" placeholder="Add a note...">${d.note}</textarea>
         <div style="display:flex;gap:8px;margin-top:7px">
-          <button onclick="onSaveNote(${day},'${act.id}')"
-            style="background:${act.color};border:none;border-radius:6px;color:#fff;padding:6px 14px;font-size:12px;cursor:pointer">Save</button>
-          <button onclick="setState({editNote:null})"
-            style="background:#2a2535;border:none;border-radius:6px;color:#8A8096;padding:6px 14px;font-size:12px;cursor:pointer">Cancel</button>
-        </div>` : `
-        <div onclick="setState({editNote:{day:${day},actId:'${act.id}'}})"
-          style="background:#0F0E11;border:1px dashed #2a2535;border-radius:8px;padding:9px 11px;
-            cursor:text;min-height:36px;font-size:13px;line-height:1.5;
-            color:${d.note ? '#C8C0D8' : '#4a4560'};font-style:${d.note ? 'normal' : 'italic'}">
-          ${d.note || 'Tap to add a note...'}
-        </div>`}
+          <button class="sm-btn" onclick="onSaveNote('${act.id}')" style="background:${act.color}">Save</button>
+          <button class="sm-btn" onclick="onCancelNote()" style="background:#2a2535;color:#8A8096">Cancel</button>
+        </div>`:`
+        <div class="note-area ${d.note?'has-note':''}" onclick="onEditNote('${act.id}')">${d.note||'Tap to add a note...'}</div>`}
     </div>`;
-}
-
-function dayDetail(day) {
-  return `
-    <div style="margin-top:20px;background:#1a1825;border:1px solid #2a2535;border-radius:16px;overflow:hidden;animation:fadeUp 0.2s ease">
-      <div style="padding:18px 20px 14px;border-bottom:1px solid #2a2535;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:10px;letter-spacing:3px;color:#6B6180;text-transform:uppercase">${day === getToday() ? 'Today' : dayLabel(day)}</div>
-          <div style="font-size:20px;font-weight:bold">Day ${day}</div>
-        </div>
-        <button onclick="setState({activeDay:null,editNote:null})"
-          style="background:#2a2535;border:none;border-radius:8px;color:#8A8096;cursor:pointer;padding:7px 12px;font-size:13px">✕</button>
-      </div>
-      <div style="margin:14px 20px 0;background:rgba(123,94,167,0.07);border:1px solid rgba(123,94,167,0.18);
-        border-radius:10px;padding:11px 14px;font-size:13px;color:#C8C0D8;font-style:italic;line-height:1.6">
-        ${MESSAGES[day]}
-      </div>
-      <div style="padding:14px 20px 20px">
-        ${ACTIVITIES.map(a => activityCard(a, day)).join('')}
-      </div>
-    </div>`;
-}
-
-// ── Main Render ──────────────────────────────────────────────────────────────
-function render() {
-  const today = getToday();
-  const done  = totalDone();
-  const total = TOTAL_DAYS * ACTIVITIES.length;
-  const pct   = Math.round((done / total) * 100);
-
-  document.getElementById('app').innerHTML = `
-
-    ${state.celebration ? `
-    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100;
-      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:24px">
-      <div style="font-size:64px;animation:pop 0.4s ease">🎉</div>
-      <div style="font-size:26px;font-weight:bold">Perfect Day ${state.activeDay}!</div>
-      <div style="font-size:15px;color:#C8C0D8;max-width:300px;line-height:1.6">Every goal crushed today. You're unstoppable! 🔥</div>
-      <button onclick="setState({celebration:false})"
-        style="background:#7B5EA7;border:none;border-radius:10px;color:#fff;padding:12px 28px;font-size:15px;cursor:pointer;margin-top:8px">
-        Onwards! 💪
-      </button>
-    </div>` : ''}
-
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#1a1625,#0f1a2e);border-bottom:1px solid #2a2535;
-      padding:28px 20px 24px;text-align:center;position:relative;overflow:hidden">
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(123,94,167,0.18) 0%,transparent 70%)"></div>
-      <div style="position:relative;z-index:1">
-        <div style="font-size:10px;letter-spacing:4px;color:#7B5EA7;text-transform:uppercase;margin-bottom:6px">24 FEB – 16 MAR 2026</div>
-        <h1 style="font-size:clamp(24px,6vw,38px);font-weight:normal;margin:0 0 4px;letter-spacing:-1px">21-Day Challenge</h1>
-        <p style="color:#6B6180;font-size:13px;margin:0 0 18px">Mind · Read · Screen · Rise · Steps</p>
-        <div style="background:rgba(123,94,167,0.1);border:1px solid rgba(123,94,167,0.25);border-radius:12px;
-          padding:12px 16px;max-width:480px;margin:0 auto 20px;font-size:13px;color:#D4CCE8;line-height:1.6;font-style:italic">
-          <span style="color:#7B5EA7;font-style:normal;font-weight:bold;font-size:10px;letter-spacing:2px;display:block;margin-bottom:5px">
-            DAY ${today} · ${dayLabel(today).toUpperCase()}
-          </span>
-          ${MESSAGES[today]}
-        </div>
-        <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap;margin-bottom:16px">
-          ${[['Progress',pct+'%'],['Done',done+'/'+total],['Perfect',perfectDays()]].map(([l,v])=>`
-          <div style="text-align:center">
-            <div style="font-size:clamp(18px,4vw,26px);font-weight:bold">${v}</div>
-            <div style="font-size:10px;color:#6B6180;letter-spacing:2px;text-transform:uppercase">${l}</div>
-          </div>`).join('')}
-        </div>
-        <div style="background:#2a2535;border-radius:4px;height:4px;max-width:360px;margin:0 auto">
-          <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#7B5EA7,#27AE60);width:${pct}%;transition:width 0.5s"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Grid + Detail -->
-    <div style="padding:20px 16px;max-width:860px;margin:0 auto">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px">
-        ${Array.from({length:TOTAL_DAYS},(_,i)=>i+1).map(day => {
-          const done = completion(day);
-          const full = done === ACTIVITIES.length;
-          const isActive = state.activeDay === day;
-          const isToday  = day === today;
-          return `
-          <button class="day-btn ripple" onclick="onDayClick(${day})"
-            style="background:${isActive?'linear-gradient(135deg,#2a1f45,#1a2a3a)':full?'#1e1535':'#1a1825'};
-              border:2px solid ${isActive?'#7B5EA7':isToday?'#F4A261':full?'rgba(123,94,167,0.4)':'#2a2535'};
-              border-radius:12px;padding:12px 6px;cursor:pointer;color:#F5F0E8;text-align:center;
-              transform:${isActive?'scale(1.06)':'scale(1)'};transition:all 0.18s;width:100%">
-            <div style="font-size:9px;color:${isToday?'#F4A261':'#5a5575'};letter-spacing:1px;margin-bottom:3px">
-              ${isToday?'TODAY':dayLabel(day)}
-            </div>
-            <div style="font-size:19px;font-weight:bold;line-height:1">${day}</div>
-            <div style="margin-top:7px;display:flex;justify-content:center;gap:2px;flex-wrap:wrap">
-              ${ACTIVITIES.map(a=>`<div style="width:5px;height:5px;border-radius:50%;background:${state.days[day][a.id].done?a.color:'#2a2535'}"></div>`).join('')}
-            </div>
-            ${full?'<div style="font-size:12px;margin-top:4px">✨</div>':''}
-          </button>`;
-        }).join('')}
-      </div>
-
-      ${state.activeDay ? dayDetail(state.activeDay) : ''}
-
-      <!-- Legend -->
-      <div style="margin-top:20px;display:flex;justify-content:center;gap:14px;flex-wrap:wrap">
-        ${ACTIVITIES.map(a=>`
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#6B6180">
-          <div style="width:7px;height:7px;border-radius:50%;background:${a.color}"></div>${a.label}
-        </div>`).join('')}
-      </div>
-    </div>
-  `;
-
-  // Auto-focus textarea if editing note
-  if (state.editNote) {
-    const ta = document.getElementById(`note-ta-${state.editNote.actId}`);
-    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
-  }
 }
 
 // ── Event Handlers ───────────────────────────────────────────────────────────
 function onDayClick(day) {
-  setState({ activeDay: state.activeDay === day ? null : day, editNote: null });
+  const prev = activeDay;
+  activeDay   = (activeDay === day) ? null : day;
+  editingNote = null;
+  if (prev) updateDayCard(prev);
+  updateDayCard(day);
+  renderDetail();
+  if (activeDay) {
+    setTimeout(() => {
+      document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+    }, 50);
+  }
 }
-function onCheck(day, actId) {
-  updateActivity(day, actId, { done: !state.days[day][actId].done });
+
+function onCloseDetail() {
+  const prev = activeDay;
+  activeDay   = null;
+  editingNote = null;
+  if (prev) updateDayCard(prev);
+  renderDetail();
 }
-function onValueInput(day, actId, val) {
-  const act = ACTIVITIES.find(a => a.id === actId);
-  const n   = parseInt(val);
-  const done = val !== '' && !isNaN(n) && (act.goalType === 'over' ? n >= act.goal : n <= act.goal);
-  updateActivity(day, actId, { value: val, done });
+
+function onCheck(actId) {
+  const d = days[activeDay][actId];
+  days[activeDay][actId].done = !d.done;
+  schedSave();
+  updateActivityCard(actId);
+  updateDayCard(activeDay);
+  updateHeader();
+  // check perfect day
+  if (ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
 }
-function onSaveNote(day, actId) {
-  const ta = document.getElementById(`note-ta-${actId}`);
-  if (ta) updateActivity(day, actId, { note: ta.value });
-  setState({ editNote: null });
+
+// KEY FIX: use onchange/onblur instead of oninput — no re-render while typing!
+function onValChange(actId, val) {
+  const act  = ACTIVITIES.find(a=>a.id===actId);
+  const n    = parseInt(val);
+  const done = val!=='' && !isNaN(n) && (act.goalType==='over' ? n>=act.goal : n<=act.goal);
+  days[activeDay][actId].value = val;
+  days[activeDay][actId].done  = done;
+  schedSave();
+  updateActivityCard(actId);
+  updateDayCard(activeDay);
+  updateHeader();
+  if (ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
+}
+
+function onEditNote(actId) {
+  editingNote = actId;
+  const wrap = document.getElementById('cards-wrap');
+  if (!wrap) return;
+  // only re-render the cards wrap, not the whole detail
+  wrap.innerHTML = ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
+  const ta = document.getElementById('note-ta-'+actId);
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); }
+}
+
+function onSaveNote(actId) {
+  const ta = document.getElementById('note-ta-'+actId);
+  if (ta) days[activeDay][actId].note = ta.value;
+  editingNote = null;
+  schedSave();
+  const wrap = document.getElementById('cards-wrap');
+  if (wrap) wrap.innerHTML = ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
+}
+
+function onCancelNote() {
+  editingNote = null;
+  const wrap = document.getElementById('cards-wrap');
+  if (wrap) wrap.innerHTML = ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
+}
+
+function showCelebration() {
+  document.getElementById('celebration').classList.add('show');
+  setTimeout(hideCelebration, 3500);
+}
+function hideCelebration() {
+  document.getElementById('celebration').classList.remove('show');
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-render();
+updateHeader();
+renderGrid();
+renderLegend();
 </script>
 </body>
 </html>
