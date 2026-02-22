@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0F0E11"/>
+<title>21-Day Challenge</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:#0F0E11;color:#F5F0E8;font-family:Georgia,serif;min-height:100vh}
+  input,textarea,button{font-family:Georgia,serif}
+  input[type=number]::-webkit-inner-spin-button{opacity:1}
+  @keyframes pop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .day-btn:active{transform:scale(0.96)!important}
+  .ripple{transition:all 0.18s ease}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'challenge-21day-v1';
+const START_DATE  = new Date('2026-02-24');
+const TOTAL_DAYS  = 21;
+
+const ACTIVITIES = [
+  {id:'mindfulness',label:'Meditation',        icon:'🧘',color:'#7B5EA7',type:'number',goal:20,  unit:'mins', max:120,  goalType:'over'},
+  {id:'reading',    label:'Reading',           icon:'📚',color:'#2E86AB',type:'number',goal:30,  unit:'pages',max:200,  goalType:'over'},
+  {id:'screentime', label:'Screen Time',       icon:'📵',color:'#E63946',type:'number',goal:120, unit:'mins', max:480,  goalType:'under'},
+  {id:'wakeup',     label:'Wake Up by 6 AM',   icon:'🌅',color:'#F4A261',type:'check'},
+  {id:'steps',      label:'6,000 Steps',       icon:'👟',color:'#27AE60',type:'number',goal:6000,unit:'steps',max:20000,goalType:'over'},
+];
+
+const MESSAGES = {
+  1:'Every journey begins with a single step. You\'ve taken yours — welcome to Day 1! 🌱',
+  2:'Two days in! Momentum is quietly building. Keep showing up. 💪',
+  3:'Day 3 is where many quit. You\'re still here — that sets you apart. 🔥',
+  4:'Four days strong! Your future self is already grateful for today.',
+  5:'Day 5 — almost a week! Small habits compound into massive change. 🚀',
+  6:'Six days of discipline. You\'re rewriting your identity one choice at a time.',
+  7:'One full week done! 🎉 You\'ve proven you can do this. Now go deeper.',
+  8:'Week 2 begins. The excitement may fade — but your commitment doesn\'t have to.',
+  9:'Day 9 — the grind phase. Champions are made when no one is watching. 👑',
+  10:'Double digits! You\'re nearly halfway. The finish line is closer than you think.',
+  11:'Day 11 — you\'re more than halfway to a new habit. Keep the streak alive!',
+  12:'Day 12. You\'re not just doing a challenge — you\'re becoming someone new. ✨',
+  13:'Lucky 13! Consistency is a superpower most people underestimate. You have it.',
+  14:'Two full weeks! 🏆 Look back at Day 1 — feel how far you\'ve come.',
+  15:'Day 15 — the final stretch begins. You\'ve earned every bit of this progress.',
+  16:'Day 16. The person who started this is not the same person finishing it. 🦋',
+  17:'Five days left. You didn\'t come this far to only come this far. Push! 💥',
+  18:'Day 18 — almost there. Breathe, trust the process, keep your eyes on the goal.',
+  19:'Day 19! Two more days to a transformation. You are so close. 🌟',
+  20:'Day 20 — the final countdown. Tomorrow is the last day. Make it count! ⚡',
+  21:'Day 21 — THE FINAL DAY! 🎊 You did it. This is not the end — it\'s who you are now. 🏅',
+};
+
+// ── Storage ──────────────────────────────────────────────────────────────────
+function load() {
+  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function save(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function blankDay() {
+  return Object.fromEntries(ACTIVITIES.map(a => [a.id, {done:false, note:'', value:''}]));
+}
+function initDays() {
+  const saved = load();
+  const d = {};
+  for (let i = 1; i <= TOTAL_DAYS; i++) {
+    d[i] = {...blankDay(), ...(saved && saved[i] ? saved[i] : {})};
+  }
+  return d;
+}
+function getToday() {
+  const t = new Date(); t.setHours(0,0,0,0);
+  const s = new Date(START_DATE); s.setHours(0,0,0,0);
+  return Math.min(Math.max(Math.floor((t-s)/864e5)+1, 1), TOTAL_DAYS);
+}
+function dayLabel(n) {
+  const d = new Date(START_DATE); d.setDate(d.getDate()+n-1);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let state = {
+  days: initDays(),
+  activeDay: null,
+  editNote: null,   // {day, actId}
+  celebration: false,
+};
+let saveTimer = null;
+
+function setState(patch) {
+  Object.assign(state, patch);
+  if (patch.days) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => save(state.days), 300);
+  }
+  render();
+}
+
+function updateActivity(day, actId, patch) {
+  const days = JSON.parse(JSON.stringify(state.days));
+  days[day][actId] = {...days[day][actId], ...patch};
+  const allDone = ACTIVITIES.every(a => days[day][a.id].done);
+  setState({days});
+  if (allDone) {
+    setState({celebration: true});
+    setTimeout(() => setState({celebration: false}), 3500);
+  }
+}
+
+// ── Render Helpers ───────────────────────────────────────────────────────────
+function completion(day) {
+  return ACTIVITIES.filter(a => state.days[day][a.id].done).length;
+}
+function totalDone() {
+  let c = 0;
+  for (let i = 1; i <= TOTAL_DAYS; i++) ACTIVITIES.forEach(a => { if (state.days[i][a.id].done) c++; });
+  return c;
+}
+function perfectDays() {
+  let c = 0;
+  for (let i = 1; i <= TOTAL_DAYS; i++) if (completion(i) === ACTIVITIES.length) c++;
+  return c;
+}
+
+// ── HTML Builders ────────────────────────────────────────────────────────────
+function inputBar(act, value, day) {
+  const n = parseInt(value);
+  const met = value !== '' && !isNaN(n) && (act.goalType === 'over' ? n >= act.goal : n <= act.goal);
+  const pct = value ? Math.min(100, Math.round((n / act.max) * 100)) : 0;
+  const barColor = met ? act.color : (act.goalType === 'under' ? '#E63946' : '#3a3550');
+  return `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <input type="number" value="${value}" min="0" max="${act.max}"
+          placeholder="Enter ${act.unit}"
+          oninput="onValueInput(${day},'${act.id}',this.value)"
+          style="flex:1;background:#0F0E11;border:1px solid ${met ? act.color : '#3a3550'};
+            border-radius:8px;color:#F5F0E8;padding:9px 12px;font-size:15px;outline:none;width:100%"/>
+        <span style="font-size:12px;color:#6B6180;white-space:nowrap">${act.unit}</span>
+        ${met ? '<span style="font-size:18px">✅</span>' : ''}
+      </div>
+      <div style="background:#2a2535;border-radius:4px;height:6px;overflow:hidden">
+        <div style="height:100%;border-radius:4px;background:${barColor};width:${Math.min(pct,100)}%;transition:width 0.4s ease"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span style="font-size:11px;color:#6B6180">${value !== '' && !isNaN(n) ? n.toLocaleString()+' '+act.unit : '—'}</span>
+        <span style="font-size:11px;color:${met ? act.color : '#6B6180'}">${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</span>
+      </div>
+    </div>`;
+}
+
+function activityCard(act, day) {
+  const d = state.days[day][act.id];
+  const isEditing = state.editNote && state.editNote.day === day && state.editNote.actId === act.id;
+  return `
+    <div style="background:${d.done ? 'rgba(255,255,255,0.03)' : '#0f0e11'};
+      border:1px solid ${d.done ? act.color+'55' : '#2a2535'};
+      border-radius:12px;padding:16px;transition:all 0.2s;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:22px">${act.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:bold">${act.label}</div>
+          ${act.type !== 'check' ? `<div style="font-size:11px;color:#6B6180">Goal: ${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</div>` : ''}
+        </div>
+        ${act.type === 'check' ? `
+          <button onclick="onCheck(${day},'${act.id}')"
+            style="width:30px;height:30px;border-radius:50%;flex-shrink:0;cursor:pointer;
+              border:2px solid ${d.done ? act.color : '#3a3550'};
+              background:${d.done ? act.color : 'transparent'};
+              color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all 0.2s">
+            ${d.done ? '✓' : ''}
+          </button>` : ''}
+      </div>
+      ${act.type !== 'check' ? inputBar(act, d.value, day) : ''}
+      ${isEditing ? `
+        <textarea id="note-ta-${act.id}" autofocus
+          placeholder="Add a note..."
+          style="width:100%;background:#0F0E11;border:1px solid #3a3550;border-radius:8px;
+            color:#F5F0E8;padding:9px 11px;font-size:13px;resize:none;height:68px;outline:none"
+        >${d.note}</textarea>
+        <div style="display:flex;gap:8px;margin-top:7px">
+          <button onclick="onSaveNote(${day},'${act.id}')"
+            style="background:${act.color};border:none;border-radius:6px;color:#fff;padding:6px 14px;font-size:12px;cursor:pointer">Save</button>
+          <button onclick="setState({editNote:null})"
+            style="background:#2a2535;border:none;border-radius:6px;color:#8A8096;padding:6px 14px;font-size:12px;cursor:pointer">Cancel</button>
+        </div>` : `
+        <div onclick="setState({editNote:{day:${day},actId:'${act.id}'}})"
+          style="background:#0F0E11;border:1px dashed #2a2535;border-radius:8px;padding:9px 11px;
+            cursor:text;min-height:36px;font-size:13px;line-height:1.5;
+            color:${d.note ? '#C8C0D8' : '#4a4560'};font-style:${d.note ? 'normal' : 'italic'}">
+          ${d.note || 'Tap to add a note...'}
+        </div>`}
+    </div>`;
+}
+
+function dayDetail(day) {
+  return `
+    <div style="margin-top:20px;background:#1a1825;border:1px solid #2a2535;border-radius:16px;overflow:hidden;animation:fadeUp 0.2s ease">
+      <div style="padding:18px 20px 14px;border-bottom:1px solid #2a2535;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:10px;letter-spacing:3px;color:#6B6180;text-transform:uppercase">${day === getToday() ? 'Today' : dayLabel(day)}</div>
+          <div style="font-size:20px;font-weight:bold">Day ${day}</div>
+        </div>
+        <button onclick="setState({activeDay:null,editNote:null})"
+          style="background:#2a2535;border:none;border-radius:8px;color:#8A8096;cursor:pointer;padding:7px 12px;font-size:13px">✕</button>
+      </div>
+      <div style="margin:14px 20px 0;background:rgba(123,94,167,0.07);border:1px solid rgba(123,94,167,0.18);
+        border-radius:10px;padding:11px 14px;font-size:13px;color:#C8C0D8;font-style:italic;line-height:1.6">
+        ${MESSAGES[day]}
+      </div>
+      <div style="padding:14px 20px 20px">
+        ${ACTIVITIES.map(a => activityCard(a, day)).join('')}
+      </div>
+    </div>`;
+}
+
+// ── Main Render ──────────────────────────────────────────────────────────────
+function render() {
+  const today = getToday();
+  const done  = totalDone();
+  const total = TOTAL_DAYS * ACTIVITIES.length;
+  const pct   = Math.round((done / total) * 100);
+
+  document.getElementById('app').innerHTML = `
+
+    ${state.celebration ? `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100;
+      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:24px">
+      <div style="font-size:64px;animation:pop 0.4s ease">🎉</div>
+      <div style="font-size:26px;font-weight:bold">Perfect Day ${state.activeDay}!</div>
+      <div style="font-size:15px;color:#C8C0D8;max-width:300px;line-height:1.6">Every goal crushed today. You're unstoppable! 🔥</div>
+      <button onclick="setState({celebration:false})"
+        style="background:#7B5EA7;border:none;border-radius:10px;color:#fff;padding:12px 28px;font-size:15px;cursor:pointer;margin-top:8px">
+        Onwards! 💪
+      </button>
+    </div>` : ''}
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a1625,#0f1a2e);border-bottom:1px solid #2a2535;
+      padding:28px 20px 24px;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(123,94,167,0.18) 0%,transparent 70%)"></div>
+      <div style="position:relative;z-index:1">
+        <div style="font-size:10px;letter-spacing:4px;color:#7B5EA7;text-transform:uppercase;margin-bottom:6px">24 FEB – 16 MAR 2026</div>
+        <h1 style="font-size:clamp(24px,6vw,38px);font-weight:normal;margin:0 0 4px;letter-spacing:-1px">21-Day Challenge</h1>
+        <p style="color:#6B6180;font-size:13px;margin:0 0 18px">Mind · Read · Screen · Rise · Steps</p>
+        <div style="background:rgba(123,94,167,0.1);border:1px solid rgba(123,94,167,0.25);border-radius:12px;
+          padding:12px 16px;max-width:480px;margin:0 auto 20px;font-size:13px;color:#D4CCE8;line-height:1.6;font-style:italic">
+          <span style="color:#7B5EA7;font-style:normal;font-weight:bold;font-size:10px;letter-spacing:2px;display:block;margin-bottom:5px">
+            DAY ${today} · ${dayLabel(today).toUpperCase()}
+          </span>
+          ${MESSAGES[today]}
+        </div>
+        <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap;margin-bottom:16px">
+          ${[['Progress',pct+'%'],['Done',done+'/'+total],['Perfect',perfectDays()]].map(([l,v])=>`
+          <div style="text-align:center">
+            <div style="font-size:clamp(18px,4vw,26px);font-weight:bold">${v}</div>
+            <div style="font-size:10px;color:#6B6180;letter-spacing:2px;text-transform:uppercase">${l}</div>
+          </div>`).join('')}
+        </div>
+        <div style="background:#2a2535;border-radius:4px;height:4px;max-width:360px;margin:0 auto">
+          <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#7B5EA7,#27AE60);width:${pct}%;transition:width 0.5s"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid + Detail -->
+    <div style="padding:20px 16px;max-width:860px;margin:0 auto">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px">
+        ${Array.from({length:TOTAL_DAYS},(_,i)=>i+1).map(day => {
+          const done = completion(day);
+          const full = done === ACTIVITIES.length;
+          const isActive = state.activeDay === day;
+          const isToday  = day === today;
+          return `
+          <button class="day-btn ripple" onclick="onDayClick(${day})"
+            style="background:${isActive?'linear-gradient(135deg,#2a1f45,#1a2a3a)':full?'#1e1535':'#1a1825'};
+              border:2px solid ${isActive?'#7B5EA7':isToday?'#F4A261':full?'rgba(123,94,167,0.4)':'#2a2535'};
+              border-radius:12px;padding:12px 6px;cursor:pointer;color:#F5F0E8;text-align:center;
+              transform:${isActive?'scale(1.06)':'scale(1)'};transition:all 0.18s;width:100%">
+            <div style="font-size:9px;color:${isToday?'#F4A261':'#5a5575'};letter-spacing:1px;margin-bottom:3px">
+              ${isToday?'TODAY':dayLabel(day)}
+            </div>
+            <div style="font-size:19px;font-weight:bold;line-height:1">${day}</div>
+            <div style="margin-top:7px;display:flex;justify-content:center;gap:2px;flex-wrap:wrap">
+              ${ACTIVITIES.map(a=>`<div style="width:5px;height:5px;border-radius:50%;background:${state.days[day][a.id].done?a.color:'#2a2535'}"></div>`).join('')}
+            </div>
+            ${full?'<div style="font-size:12px;margin-top:4px">✨</div>':''}
+          </button>`;
+        }).join('')}
+      </div>
+
+      ${state.activeDay ? dayDetail(state.activeDay) : ''}
+
+      <!-- Legend -->
+      <div style="margin-top:20px;display:flex;justify-content:center;gap:14px;flex-wrap:wrap">
+        ${ACTIVITIES.map(a=>`
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#6B6180">
+          <div style="width:7px;height:7px;border-radius:50%;background:${a.color}"></div>${a.label}
+        </div>`).join('')}
+      </div>
+    </div>
+  `;
+
+  // Auto-focus textarea if editing note
+  if (state.editNote) {
+    const ta = document.getElementById(`note-ta-${state.editNote.actId}`);
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }
+}
+
+// ── Event Handlers ───────────────────────────────────────────────────────────
+function onDayClick(day) {
+  setState({ activeDay: state.activeDay === day ? null : day, editNote: null });
+}
+function onCheck(day, actId) {
+  updateActivity(day, actId, { done: !state.days[day][actId].done });
+}
+function onValueInput(day, actId, val) {
+  const act = ACTIVITIES.find(a => a.id === actId);
+  const n   = parseInt(val);
+  const done = val !== '' && !isNaN(n) && (act.goalType === 'over' ? n >= act.goal : n <= act.goal);
+  updateActivity(day, actId, { value: val, done });
+}
+function onSaveNote(day, actId) {
+  const ta = document.getElementById(`note-ta-${actId}`);
+  if (ta) updateActivity(day, actId, { note: ta.value });
+  setState({ editNote: null });
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
