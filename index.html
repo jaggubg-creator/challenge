@@ -212,10 +212,13 @@ function initDays(saved) {
 
 // ── Date Helpers ──────────────────────────────────────────────────────────
 function getToday() {
-  if(!startDate) return 1;
+  if(!startDate) return null;
   const t=new Date(); t.setHours(0,0,0,0);
   const s=new Date(startDate); s.setHours(0,0,0,0);
-  return Math.min(Math.max(Math.floor((t-s)/864e5)+1,1),TOTAL_DAYS);
+  const diff = Math.floor((t-s)/864e5)+1;
+  if(diff < 1) return null;  // challenge hasn't started yet
+  if(diff > TOTAL_DAYS) return null; // challenge is over
+  return diff;
 }
 function dayLabel(n) {
   if(!startDate) return '';
@@ -384,8 +387,27 @@ function perfectDays(){ let c=0; for(let i=1;i<=TOTAL_DAYS;i++) if(completion(i)
 function updateHeader(){
   const today=getToday(), done=totalDone(), total=TOTAL_DAYS*ACTIVITIES.length, pct=Math.round((done/total)*100);
   document.getElementById('challenge-dates').textContent = `${startDateLabel()} – ${endDateLabel()}`;
-  document.getElementById('day-label').textContent       = `DAY ${today} · ${dayLabel(today).toUpperCase()}`;
-  document.getElementById('day-msg').textContent         = MESSAGES[today];
+
+  // Show appropriate message based on challenge status
+  if(today === null){
+    const t=new Date(); t.setHours(0,0,0,0);
+    const s=new Date(startDate); s.setHours(0,0,0,0);
+    const diff = Math.floor((t-s)/864e5)+1;
+    if(diff < 1){
+      // Future start
+      const daysLeft = Math.abs(diff)+1;
+      document.getElementById('day-label').textContent = 'CHALLENGE NOT STARTED YET';
+      document.getElementById('day-msg').textContent   = `Your challenge begins on ${startDateLabel()}. ${daysLeft} day${daysLeft>1?'s':''} to go! Get ready! 🚀`;
+    } else {
+      // Challenge completed
+      document.getElementById('day-label').textContent = 'CHALLENGE COMPLETE 🏅';
+      document.getElementById('day-msg').textContent   = 'You completed your 21-day challenge! What an achievement!';
+    }
+  } else {
+    document.getElementById('day-label').textContent = `DAY ${today} · ${dayLabel(today).toUpperCase()}`;
+    document.getElementById('day-msg').textContent   = MESSAGES[today];
+  }
+
   document.getElementById('stat-pct').textContent        = pct+'%';
   document.getElementById('stat-done').textContent       = done+'/'+total;
   document.getElementById('stat-perfect').textContent    = perfectDays();
@@ -431,8 +453,15 @@ function renderGrid(){
   grid.innerHTML='';
   for(let day=1;day<=TOTAL_DAYS;day++){
     const done=completion(day), full=done===ACTIVITIES.length, isToday=day===today;
+    // Days in the future (beyond today) are dimmed
+    const t=new Date(); t.setHours(0,0,0,0);
+    const s=new Date(startDate); s.setHours(0,0,0,0);
+    const dayDate=new Date(s); dayDate.setDate(dayDate.getDate()+day-1);
+    const isFuture = dayDate > t;
     const btn=document.createElement('button');
-    btn.className='day-btn day-card'; btn.id='day-'+day; btn.onclick=()=>onDayClick(day);
+    btn.className='day-btn day-card'; btn.id='day-'+day;
+    btn.onclick=()=>onDayClick(day);
+    btn.style.opacity = isFuture ? '0.4' : '1';
     btn.innerHTML=`
       <div style="font-size:9px;color:${isToday?'#F4A261':'#5a5575'};letter-spacing:1px;margin-bottom:3px">${isToday?'TODAY':dayLabel(day)}</div>
       <div style="font-size:19px;font-weight:bold;line-height:1">${day}</div>
