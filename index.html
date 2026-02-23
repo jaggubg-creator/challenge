@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#0F0E11"/>
 <link rel="manifest" href="/challenge/manifest.json"/>
-<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/challenge/sw.js');</script>
 <title>21-Day Challenge</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -15,51 +14,64 @@ body{background:#0F0E11;color:#F5F0E8;font-family:Georgia,serif;min-height:100vh
 input,textarea,button{font-family:Georgia,serif}
 @keyframes pop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:40px;height:40px;border:3px solid #2a2535;border-top-color:#7B5EA7;border-radius:50%;animation:spin 0.8s linear infinite}
 .day-btn:active{opacity:0.8}
-
-/* Activity card */
 .act-card{border-radius:12px;padding:16px;margin-bottom:12px;transition:border-color 0.3s,background 0.3s}
-
-/* Input styling */
-.num-input{width:100%;background:#0F0E11;border-radius:8px;color:#F5F0E8;
-  padding:9px 12px;font-size:16px;outline:none;font-family:Georgia,serif;
-  border:1px solid #3a3550;transition:border-color 0.3s}
-.num-input:focus{border-color:#7B5EA7}
-
-/* Progress bar */
+.num-input{width:100%;background:#0F0E11;border-radius:8px;color:#F5F0E8;padding:9px 12px;font-size:16px;outline:none;font-family:Georgia,serif;border:1px solid #3a3550;transition:border-color 0.3s}
 .bar-wrap{background:#2a2535;border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px}
 .bar-fill{height:100%;border-radius:4px;transition:width 0.4s ease,background 0.3s}
-
-/* Note area */
-.note-area{background:#0F0E11;border:1px dashed #2a2535;border-radius:8px;
-  padding:9px 11px;min-height:36px;font-size:13px;line-height:1.5;cursor:text;
-  color:#4a4560;font-style:italic}
+.note-area{background:#0F0E11;border:1px dashed #2a2535;border-radius:8px;padding:9px 11px;min-height:36px;font-size:13px;line-height:1.5;cursor:text;color:#4a4560;font-style:italic}
 .note-area.has-note{color:#C8C0D8;font-style:normal}
-.note-ta{width:100%;background:#0F0E11;border:1px solid #3a3550;border-radius:8px;
-  color:#F5F0E8;padding:9px 11px;font-size:13px;resize:none;height:68px;
-  outline:none;font-family:Georgia,serif}
-
-/* Check button */
-.check-btn{width:30px;height:30px;border-radius:50%;flex-shrink:0;cursor:pointer;
-  border:2px solid #3a3550;background:transparent;color:#fff;font-size:15px;
-  display:flex;align-items:center;justify-content:center;transition:all 0.2s}
-
-/* Small buttons */
+.note-ta{width:100%;background:#0F0E11;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:9px 11px;font-size:13px;resize:none;height:68px;outline:none;font-family:Georgia,serif}
+.check-btn{width:30px;height:30px;border-radius:50%;flex-shrink:0;cursor:pointer;border:2px solid #3a3550;background:transparent;color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
 .sm-btn{border:none;border-radius:6px;color:#fff;padding:6px 14px;font-size:12px;cursor:pointer}
-
-/* Celebration overlay */
-#celebration{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100;
-  display:none;align-items:center;justify-content:center;
-  flex-direction:column;gap:16px;text-align:center;padding:24px}
+#celebration{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:24px}
 #celebration.show{display:flex}
-
-/* Day grid */
 #day-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
-.day-card{border-radius:12px;padding:12px 6px;cursor:pointer;color:#F5F0E8;
-  text-align:center;border:2px solid #2a2535;background:#1a1825;width:100%;transition:all 0.18s}
+.day-card{border-radius:12px;padding:12px 6px;cursor:pointer;color:#F5F0E8;text-align:center;border:2px solid #2a2535;background:#1a1825;width:100%;transition:all 0.18s}
+
+/* Login screen */
+#login-screen{position:fixed;inset:0;background:#0F0E11;z-index:200;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-box{max-width:360px;width:100%;text-align:center}
+.google-btn{width:100%;background:#fff;border:none;border-radius:10px;color:#333;padding:14px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:bold;margin-top:12px}
+.google-btn:active{opacity:0.9}
+
+/* Save indicator */
+#save-indicator{position:fixed;bottom:20px;right:20px;background:#27AE60;color:#fff;padding:8px 14px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.3s;z-index:50;pointer-events:none}
+#save-indicator.show{opacity:1}
 </style>
 </head>
 <body>
+
+<!-- Login Screen -->
+<div id="login-screen">
+  <div class="login-box">
+    <div style="font-size:56px;margin-bottom:16px">🏆</div>
+    <h1 style="font-size:26px;font-weight:normal;margin-bottom:8px">21-Day Challenge</h1>
+    <p style="color:#8A8096;font-size:13px;margin-bottom:32px;line-height:1.6">
+      Sign in to save your progress to the cloud. Your data stays safe and syncs across devices.
+    </p>
+    <div style="background:#1a1825;border:1px solid #2a2535;border-radius:16px;padding:24px">
+      <div id="login-status" style="color:#8A8096;font-size:13px;margin-bottom:16px">
+        Sign in to get started
+      </div>
+      <button class="google-btn" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 01-7.18-2.54H1.83v2.07A8 8 0 008.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 010-3.04V5.41H1.83a8 8 0 000 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 001.83 5.4L4.5 7.49a4.77 4.77 0 014.48-3.3z"/></svg>
+        Continue with Google
+      </button>
+      <div id="login-spinner" style="display:none;justify-content:center;margin-top:16px">
+        <div class="spinner"></div>
+      </div>
+    </div>
+    <p style="color:#4a4560;font-size:11px;margin-top:16px">
+      Each person's data is saved privately under their Google account ☁️
+    </p>
+  </div>
+</div>
+
+<!-- Save Indicator -->
+<div id="save-indicator">✓ Saved to cloud</div>
 
 <!-- Celebration -->
 <div id="celebration">
@@ -73,6 +85,11 @@ input,textarea,button{font-family:Georgia,serif}
 <div style="background:linear-gradient(135deg,#1a1625,#0f1a2e);border-bottom:1px solid #2a2535;padding:28px 20px 24px;text-align:center;position:relative;overflow:hidden">
   <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(123,94,167,0.18) 0%,transparent 70%)"></div>
   <div style="position:relative;z-index:1">
+    <!-- User bar -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div id="user-badge" style="background:rgba(123,94,167,0.2);border-radius:20px;padding:6px 14px;font-size:13px;color:#C8C0D8;display:none"></div>
+      <button onclick="signOut()" id="signout-btn" style="background:#2a2535;border:none;border-radius:20px;color:#8A8096;cursor:pointer;padding:6px 14px;font-size:12px;display:none;margin-left:auto">Sign Out</button>
+    </div>
     <div style="font-size:10px;letter-spacing:4px;color:#7B5EA7;text-transform:uppercase;margin-bottom:6px">24 FEB – 16 MAR 2026</div>
     <h1 style="font-size:clamp(24px,6vw,38px);font-weight:normal;margin:0 0 4px;letter-spacing:-1px">21-Day Challenge</h1>
     <p style="color:#6B6180;font-size:13px;margin:0 0 18px">Mind · Read · Screen · Rise · Steps</p>
@@ -98,20 +115,36 @@ input,textarea,button{font-family:Georgia,serif}
   <div style="margin-top:20px;display:flex;justify-content:center;gap:14px;flex-wrap:wrap" id="legend"></div>
 </div>
 
-<script>
-// ── Constants ────────────────────────────────────────────────────────────────
-const STORAGE_KEY = 'challenge-21day-v1';
-const START_DATE  = new Date('2026-02-24');
-const TOTAL_DAYS  = 21;
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
+                                                  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc }      from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
+// ── Firebase Init ─────────────────────────────────────────────────────────
+const app = initializeApp({
+  apiKey:            "AIzaSyCjATTTfUiV45er7PKMftps8f5l5-PKdvU",
+  authDomain:        "challenge-tracker-ddfc9.firebaseapp.com",
+  projectId:         "challenge-tracker-ddfc9",
+  storageBucket:     "challenge-tracker-ddfc9.firebasestorage.app",
+  messagingSenderId: "654942798079",
+  appId:             "1:654942798079:web:75272e309b283c3283ccca"
+});
+const auth     = getAuth(app);
+const db       = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const START_DATE = new Date('2026-02-24');
+const TOTAL_DAYS = 21;
 const ACTIVITIES = [
-  {id:'mindfulness',label:'Meditation',       icon:'🧘',color:'#7B5EA7',type:'number',goal:20,  unit:'mins', max:120,  goalType:'over'},
-  {id:'reading',    label:'Reading',          icon:'📚',color:'#2E86AB',type:'number',goal:30,  unit:'pages',max:200,  goalType:'over'},
-  {id:'screentime', label:'Screen Time',      icon:'📵',color:'#E63946',type:'number',goal:120, unit:'mins', max:480,  goalType:'under'},
-  {id:'wakeup',     label:'Wake Up by 6 AM',  icon:'🌅',color:'#F4A261',type:'check'},
-  {id:'steps',      label:'6,000 Steps',      icon:'👟',color:'#27AE60',type:'number',goal:6000,unit:'steps',max:20000,goalType:'over'},
+  {id:'mindfulness',label:'Meditation',      icon:'🧘',color:'#7B5EA7',type:'number',goal:20,  unit:'mins', max:120,  goalType:'over'},
+  {id:'reading',    label:'Reading',         icon:'📚',color:'#2E86AB',type:'number',goal:30,  unit:'pages',max:200,  goalType:'over'},
+  {id:'screentime', label:'Screen Time',     icon:'📵',color:'#E63946',type:'number',goal:120, unit:'mins', max:480,  goalType:'under'},
+  {id:'wakeup',     label:'Wake Up by 6 AM', icon:'🌅',color:'#F4A261',type:'check'},
+  {id:'steps',      label:'6,000 Steps',     icon:'👟',color:'#27AE60',type:'number',goal:6000,unit:'steps',max:20000,goalType:'over'},
 ];
-
 const MESSAGES = {
   1:"Every journey begins with a single step. You've taken yours — welcome to Day 1! 🌱",
   2:"Two days in! Momentum is quietly building. Keep showing up. 💪",
@@ -136,31 +169,83 @@ const MESSAGES = {
   21:"Day 21 — THE FINAL DAY! 🎊 You did it. This is not the end — it's who you are now. 🏅",
 };
 
-// ── Storage ──────────────────────────────────────────────────────────────────
-function loadData() {
-  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+// ── State ─────────────────────────────────────────────────────────────────
+let days       = {};
+let activeDay  = null;
+let editingNote = null;
+let currentUID = null;
+let saveTimer  = null;
+
+function blankDay() { return Object.fromEntries(ACTIVITIES.map(a=>[a.id,{done:false,note:'',value:''}])); }
+function initDays(saved) {
+  const d = {};
+  for (let i=1;i<=TOTAL_DAYS;i++) d[i] = {...blankDay(),...(saved&&saved[i]?saved[i]:{})};
+  return d;
 }
-let saveTimer = null;
+
+// ── Firestore Save/Load ───────────────────────────────────────────────────
+async function loadFromFirestore(uid) {
+  try {
+    const snap = await getDoc(doc(db,'users',uid));
+    return snap.exists() ? snap.data().days : null;
+  } catch(e) { console.error(e); return null; }
+}
+
 function schedSave() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(days)); } catch {}
-  }, 400);
+  saveTimer = setTimeout(async () => {
+    if (!currentUID) return;
+    try {
+      await setDoc(doc(db,'users',currentUID), {days}, {merge:true});
+      showSaveIndicator();
+    } catch(e) { console.error(e); }
+  }, 800);
 }
 
-// ── State ────────────────────────────────────────────────────────────────────
-function blankDay() { return Object.fromEntries(ACTIVITIES.map(a=>[a.id,{done:false,note:'',value:''}])); }
-
-const saved = loadData();
-const days  = {};
-for (let i = 1; i <= TOTAL_DAYS; i++) {
-  days[i] = {...blankDay(), ...(saved && saved[i] ? saved[i] : {})};
+function showSaveIndicator() {
+  const el = document.getElementById('save-indicator');
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
 }
 
-let activeDay  = null;
-let editingNote = null; // actId string or null
+// ── Auth ──────────────────────────────────────────────────────────────────
+window.signInWithGoogle = async () => {
+  document.getElementById('login-spinner').style.display = 'flex';
+  document.getElementById('login-status').textContent = 'Signing in...';
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    document.getElementById('login-spinner').style.display = 'none';
+    document.getElementById('login-status').textContent = 'Sign in failed. Please try again.';
+  }
+};
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+window.signOut = async () => {
+  await fbSignOut(auth);
+  days = {}; activeDay = null; currentUID = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('user-badge').style.display   = 'none';
+  document.getElementById('signout-btn').style.display  = 'none';
+  document.getElementById('login-status').textContent   = 'Sign in to get started';
+  document.getElementById('login-spinner').style.display = 'none';
+};
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    currentUID = user.uid;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('user-badge').style.display   = 'block';
+    document.getElementById('user-badge').textContent     = '👤 ' + (user.displayName || user.email);
+    document.getElementById('signout-btn').style.display  = 'block';
+    const saved = await loadFromFirestore(user.uid);
+    days = initDays(saved);
+    updateHeader();
+    renderGrid();
+    renderLegend();
+  }
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────
 function getToday() {
   const t=new Date(); t.setHours(0,0,0,0);
   const s=new Date(START_DATE); s.setHours(0,0,0,0);
@@ -174,101 +259,59 @@ function completion(day) { return ACTIVITIES.filter(a=>days[day][a.id].done).len
 function totalDone() { let c=0; for(let i=1;i<=TOTAL_DAYS;i++) ACTIVITIES.forEach(a=>{if(days[i][a.id].done)c++;}); return c; }
 function perfectDays() { let c=0; for(let i=1;i<=TOTAL_DAYS;i++) if(completion(i)===ACTIVITIES.length)c++; return c; }
 
-// ── Targeted DOM updates (no full re-render) ─────────────────────────────────
-
+// ── DOM Updates ───────────────────────────────────────────────────────────
 function updateHeader() {
-  const today = getToday();
-  const done  = totalDone();
-  const total = TOTAL_DAYS * ACTIVITIES.length;
-  const pct   = Math.round((done/total)*100);
-  document.getElementById('day-label').textContent = `DAY ${today} · ${dayLabel(today).toUpperCase()}`;
-  document.getElementById('day-msg').textContent   = MESSAGES[today];
-  document.getElementById('stat-pct').textContent  = pct+'%';
-  document.getElementById('stat-done').textContent = done+'/'+total;
-  document.getElementById('stat-perfect').textContent = perfectDays();
-  document.getElementById('main-bar').style.width  = pct+'%';
+  const today=getToday(), done=totalDone(), total=TOTAL_DAYS*ACTIVITIES.length, pct=Math.round((done/total)*100);
+  document.getElementById('day-label').textContent     = `DAY ${today} · ${dayLabel(today).toUpperCase()}`;
+  document.getElementById('day-msg').textContent       = MESSAGES[today];
+  document.getElementById('stat-pct').textContent      = pct+'%';
+  document.getElementById('stat-done').textContent     = done+'/'+total;
+  document.getElementById('stat-perfect').textContent  = perfectDays();
+  document.getElementById('main-bar').style.width      = pct+'%';
 }
 
 function updateDayCard(day) {
-  const el = document.getElementById('day-'+day);
-  if (!el) return;
-  const today = getToday();
-  const done  = completion(day);
-  const full  = done === ACTIVITIES.length;
-  const isActive = activeDay === day;
-  const isToday  = day === today;
-  el.style.background = isActive ? 'linear-gradient(135deg,#2a1f45,#1a2a3a)' : full ? '#1e1535' : '#1a1825';
-  el.style.borderColor = isActive ? '#7B5EA7' : isToday ? '#F4A261' : full ? 'rgba(123,94,167,0.4)' : '#2a2535';
-  el.style.transform   = isActive ? 'scale(1.06)' : 'scale(1)';
-  // update dots
-  const dotWrap = el.querySelector('.dots');
-  if (dotWrap) {
-    ACTIVITIES.forEach((a,i) => { dotWrap.children[i].style.background = days[day][a.id].done ? a.color : '#2a2535'; });
-  }
-  const star = el.querySelector('.star');
-  if (star) star.style.display = full ? 'block' : 'none';
+  const el=document.getElementById('day-'+day); if(!el) return;
+  const today=getToday(), done=completion(day), full=done===ACTIVITIES.length, isActive=activeDay===day, isToday=day===today;
+  el.style.background  = isActive?'linear-gradient(135deg,#2a1f45,#1a2a3a)':full?'#1e1535':'#1a1825';
+  el.style.borderColor = isActive?'#7B5EA7':isToday?'#F4A261':full?'rgba(123,94,167,0.4)':'#2a2535';
+  el.style.transform   = isActive?'scale(1.06)':'scale(1)';
+  const dotWrap=el.querySelector('.dots');
+  if(dotWrap) ACTIVITIES.forEach((a,i)=>{ dotWrap.children[i].style.background=days[day][a.id].done?a.color:'#2a2535'; });
+  const star=el.querySelector('.star'); if(star) star.style.display=full?'block':'none';
 }
 
 function updateActivityCard(actId) {
-  const day = activeDay;
-  if (!day) return;
-  const act = ACTIVITIES.find(a=>a.id===actId);
-  const d   = days[day][actId];
-  const card = document.getElementById('card-'+actId);
-  if (!card) return;
-
-  card.style.background   = d.done ? 'rgba(255,255,255,0.03)' : '#0f0e11';
-  card.style.borderColor  = d.done ? act.color+'55' : '#2a2535';
-
-  if (act.type === 'check') {
-    const btn = card.querySelector('.check-btn');
-    if (btn) {
-      btn.style.background   = d.done ? act.color : 'transparent';
-      btn.style.borderColor  = d.done ? act.color : '#3a3550';
-      btn.textContent        = d.done ? '✓' : '';
-    }
+  const day=activeDay; if(!day) return;
+  const act=ACTIVITIES.find(a=>a.id===actId), d=days[day][actId], card=document.getElementById('card-'+actId);
+  if(!card) return;
+  card.style.background  = d.done?'rgba(255,255,255,0.03)':'#0f0e11';
+  card.style.borderColor = d.done?act.color+'55':'#2a2535';
+  if(act.type==='check') {
+    const btn=card.querySelector('.check-btn');
+    if(btn){btn.style.background=d.done?act.color:'transparent';btn.style.borderColor=d.done?act.color:'#3a3550';btn.textContent=d.done?'✓':'';}
     return;
   }
-
-  // Update input border
-  const inp = card.querySelector('.num-input');
-  const n   = parseInt(d.value);
-  const met = d.value !== '' && !isNaN(n) && (act.goalType==='over' ? n>=act.goal : n<=act.goal);
-  if (inp) inp.style.borderColor = met ? act.color : '#3a3550';
-
-  // Update bar
-  const bar = card.querySelector('.bar-fill');
-  const pct = d.value ? Math.min(100, Math.round((n/act.max)*100)) : 0;
-  if (bar) {
-    bar.style.width      = Math.min(pct,100)+'%';
-    bar.style.background = met ? act.color : (act.goalType==='under' ? '#E63946' : '#3a3550');
-  }
-
-  // Update labels
-  const left  = card.querySelector('.bar-left');
-  const right = card.querySelector('.bar-right');
-  if (left)  left.textContent  = d.value !== '' && !isNaN(n) ? n.toLocaleString()+' '+act.unit : '—';
-  if (right) right.style.color = met ? act.color : '#6B6180';
-
-  // Emoji
-  const emo = card.querySelector('.met-emoji');
-  if (emo) emo.style.display = met ? 'inline' : 'none';
+  const inp=card.querySelector('.num-input'), n=parseInt(d.value);
+  const met=d.value!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
+  if(inp) inp.style.borderColor=met?act.color:'#3a3550';
+  const bar=card.querySelector('.bar-fill'), pct=d.value?Math.min(100,Math.round((n/act.max)*100)):0;
+  if(bar){bar.style.width=Math.min(pct,100)+'%';bar.style.background=met?act.color:(act.goalType==='under'?'#E63946':'#3a3550');}
+  const left=card.querySelector('.bar-left'), right=card.querySelector('.bar-right');
+  if(left) left.textContent=d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—';
+  if(right) right.style.color=met?act.color:'#6B6180';
+  const emo=card.querySelector('.met-emoji'); if(emo) emo.style.display=met?'inline':'none';
 }
 
-// ── Render (initial full render only) ────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────
 function renderGrid() {
-  const today = getToday();
-  const grid  = document.getElementById('day-grid');
-  grid.innerHTML = '';
-  for (let day = 1; day <= TOTAL_DAYS; day++) {
-    const done   = completion(day);
-    const full   = done === ACTIVITIES.length;
-    const isToday = day === today;
-    const btn = document.createElement('button');
-    btn.className   = 'day-btn day-card';
-    btn.id          = 'day-'+day;
-    btn.onclick     = () => onDayClick(day);
-    btn.innerHTML   = `
+  const today=getToday(), grid=document.getElementById('day-grid');
+  grid.innerHTML='';
+  for(let day=1;day<=TOTAL_DAYS;day++){
+    const done=completion(day),full=done===ACTIVITIES.length,isToday=day===today;
+    const btn=document.createElement('button');
+    btn.className='day-btn day-card'; btn.id='day-'+day; btn.onclick=()=>onDayClick(day);
+    btn.innerHTML=`
       <div style="font-size:9px;color:${isToday?'#F4A261':'#5a5575'};letter-spacing:1px;margin-bottom:3px">${isToday?'TODAY':dayLabel(day)}</div>
       <div style="font-size:19px;font-weight:bold;line-height:1">${day}</div>
       <div class="dots" style="margin-top:7px;display:flex;justify-content:center;gap:2px;flex-wrap:wrap">
@@ -280,166 +323,13 @@ function renderGrid() {
 }
 
 function renderLegend() {
-  document.getElementById('legend').innerHTML = ACTIVITIES.map(a=>`
+  document.getElementById('legend').innerHTML=ACTIVITIES.map(a=>`
     <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#6B6180">
       <div style="width:7px;height:7px;border-radius:50%;background:${a.color}"></div>${a.label}
     </div>`).join('');
 }
 
 function renderDetail() {
-  const panel = document.getElementById('detail-panel');
-  if (!activeDay) { panel.innerHTML = ''; return; }
-  const day = activeDay;
-  panel.innerHTML = `
-    <div style="margin-top:20px;background:#1a1825;border:1px solid #2a2535;border-radius:16px;overflow:hidden;animation:fadeUp 0.2s ease">
-      <div style="padding:18px 20px 14px;border-bottom:1px solid #2a2535;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:10px;letter-spacing:3px;color:#6B6180;text-transform:uppercase">${day===getToday()?'Today':dayLabel(day)}</div>
-          <div style="font-size:20px;font-weight:bold">Day ${day}</div>
-        </div>
-        <button onclick="onCloseDetail()" style="background:#2a2535;border:none;border-radius:8px;color:#8A8096;cursor:pointer;padding:7px 12px;font-size:13px">✕</button>
-      </div>
-      <div style="margin:14px 20px 0;background:rgba(123,94,167,0.07);border:1px solid rgba(123,94,167,0.18);border-radius:10px;padding:11px 14px;font-size:13px;color:#C8C0D8;font-style:italic;line-height:1.6">
-        ${MESSAGES[day]}
-      </div>
-      <div style="padding:14px 20px 20px" id="cards-wrap">
-        ${ACTIVITIES.map(a=>renderCard(a,day)).join('')}
-      </div>
-    </div>`;
-}
-
-function renderCard(act, day) {
-  const d   = days[day][act.id];
-  const n   = parseInt(d.value);
-  const met = d.value !== '' && !isNaN(n) && (act.goalType==='over' ? n>=act.goal : n<=act.goal);
-  const pct = d.value ? Math.min(100, Math.round((n/act.max)*100)) : 0;
-  const isEditing = editingNote === act.id;
-  return `
-    <div class="act-card" id="card-${act.id}"
-      style="background:${d.done?'rgba(255,255,255,0.03)':'#0f0e11'};border:1px solid ${d.done?act.color+'55':'#2a2535'}">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <span style="font-size:22px">${act.icon}</span>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:bold">${act.label}</div>
-          ${act.type!=='check'?`<div style="font-size:11px;color:#6B6180">Goal: ${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</div>`:''}
-        </div>
-        ${act.type==='check'?`
-          <button class="check-btn" onclick="onCheck('${act.id}')"
-            style="background:${d.done?act.color:'transparent'};border-color:${d.done?act.color:'#3a3550'}">
-            ${d.done?'✓':''}
-          </button>`:''}
-      </div>
-      ${act.type!=='check'?`
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <input class="num-input" type="number" inputmode="numeric"
-            value="${d.value}" min="0" max="${act.max}"
-            placeholder="Enter ${act.unit}"
-            style="border-color:${met?act.color:'#3a3550'}"
-            onchange="onValChange('${act.id}',this.value)"
-            onblur="onValChange('${act.id}',this.value)"/>
-          <span style="font-size:12px;color:#6B6180;white-space:nowrap">${act.unit}</span>
-          <span class="met-emoji" style="font-size:18px;display:${met?'inline':'none'}">✅</span>
-        </div>
-        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(pct,100)}%;background:${met?act.color:act.goalType==='under'?'#E63946':'#3a3550'}"></div></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-          <span class="bar-left" style="font-size:11px;color:#6B6180">${d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—'}</span>
-          <span class="bar-right" style="font-size:11px;color:${met?act.color:'#6B6180'}">${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</span>
-        </div>`:''}
-      ${isEditing?`
-        <textarea class="note-ta" id="note-ta-${act.id}" placeholder="Add a note...">${d.note}</textarea>
-        <div style="display:flex;gap:8px;margin-top:7px">
-          <button class="sm-btn" onclick="onSaveNote('${act.id}')" style="background:${act.color}">Save</button>
-          <button class="sm-btn" onclick="onCancelNote()" style="background:#2a2535;color:#8A8096">Cancel</button>
-        </div>`:`
-        <div class="note-area ${d.note?'has-note':''}" onclick="onEditNote('${act.id}')">${d.note||'Tap to add a note...'}</div>`}
-    </div>`;
-}
-
-// ── Event Handlers ───────────────────────────────────────────────────────────
-function onDayClick(day) {
-  const prev = activeDay;
-  activeDay   = (activeDay === day) ? null : day;
-  editingNote = null;
-  if (prev) updateDayCard(prev);
-  updateDayCard(day);
-  renderDetail();
-  if (activeDay) {
-    setTimeout(() => {
-      document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
-    }, 50);
-  }
-}
-
-function onCloseDetail() {
-  const prev = activeDay;
-  activeDay   = null;
-  editingNote = null;
-  if (prev) updateDayCard(prev);
-  renderDetail();
-}
-
-function onCheck(actId) {
-  const d = days[activeDay][actId];
-  days[activeDay][actId].done = !d.done;
-  schedSave();
-  updateActivityCard(actId);
-  updateDayCard(activeDay);
-  updateHeader();
-  // check perfect day
-  if (ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
-}
-
-// KEY FIX: use onchange/onblur instead of oninput — no re-render while typing!
-function onValChange(actId, val) {
-  const act  = ACTIVITIES.find(a=>a.id===actId);
-  const n    = parseInt(val);
-  const done = val!=='' && !isNaN(n) && (act.goalType==='over' ? n>=act.goal : n<=act.goal);
-  days[activeDay][actId].value = val;
-  days[activeDay][actId].done  = done;
-  schedSave();
-  updateActivityCard(actId);
-  updateDayCard(activeDay);
-  updateHeader();
-  if (ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
-}
-
-function onEditNote(actId) {
-  editingNote = actId;
-  const wrap = document.getElementById('cards-wrap');
-  if (!wrap) return;
-  // only re-render the cards wrap, not the whole detail
-  wrap.innerHTML = ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
-  const ta = document.getElementById('note-ta-'+actId);
-  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); }
-}
-
-function onSaveNote(actId) {
-  const ta = document.getElementById('note-ta-'+actId);
-  if (ta) days[activeDay][actId].note = ta.value;
-  editingNote = null;
-  schedSave();
-  const wrap = document.getElementById('cards-wrap');
-  if (wrap) wrap.innerHTML = ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
-}
-
-function onCancelNote() {
-  editingNote = null;
-  const wrap = document.getElementById('cards-wrap');
-  if (wrap) wrap.innerHTML = ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
-}
-
-function showCelebration() {
-  document.getElementById('celebration').classList.add('show');
-  setTimeout(hideCelebration, 3500);
-}
-function hideCelebration() {
-  document.getElementById('celebration').classList.remove('show');
-}
-
-// ── Init ─────────────────────────────────────────────────────────────────────
-updateHeader();
-renderGrid();
-renderLegend();
-</script>
-</body>
-</html>
+  const panel=document.getElementById('detail-panel');
+  if(!activeDay){panel.innerHTML='';return;}
+  const day=activ
