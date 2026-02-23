@@ -1,0 +1,17 @@
+{
+  "name": "21-Day Challenge",
+  "short_name": "Challenge",
+  "description": "Track your 21-day personal challenge",
+  "start_url": "/challenge/",
+  "display": "standalone",
+  "background_color": "#0F0E11",
+  "theme_color": "#7B5EA7",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
