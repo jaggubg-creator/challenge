@@ -332,4 +332,103 @@ function renderLegend() {
 function renderDetail() {
   const panel=document.getElementById('detail-panel');
   if(!activeDay){panel.innerHTML='';return;}
-  const day=activ
+  const day=activeDay;
+  panel.innerHTML=`
+    <div style="margin-top:20px;background:#1a1825;border:1px solid #2a2535;border-radius:16px;overflow:hidden;animation:fadeUp 0.2s ease">
+      <div style="padding:18px 20px 14px;border-bottom:1px solid #2a2535;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:10px;letter-spacing:3px;color:#6B6180;text-transform:uppercase">${day===getToday()?'Today':dayLabel(day)}</div>
+          <div style="font-size:20px;font-weight:bold">Day ${day}</div>
+        </div>
+        <button onclick="onCloseDetail()" style="background:#2a2535;border:none;border-radius:8px;color:#8A8096;cursor:pointer;padding:7px 12px;font-size:13px">✕</button>
+      </div>
+      <div style="margin:14px 20px 0;background:rgba(123,94,167,0.07);border:1px solid rgba(123,94,167,0.18);border-radius:10px;padding:11px 14px;font-size:13px;color:#C8C0D8;font-style:italic;line-height:1.6">
+        ${MESSAGES[day]}
+      </div>
+      <div style="padding:14px 20px 20px" id="cards-wrap">
+        ${ACTIVITIES.map(a=>renderCard(a,day)).join('')}
+      </div>
+    </div>`;
+}
+
+function renderCard(act,day) {
+  const d=days[day][act.id], n=parseInt(d.value);
+  const met=d.value!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
+  const pct=d.value?Math.min(100,Math.round((n/act.max)*100)):0;
+  const isEditing=editingNote===act.id;
+  return `
+    <div class="act-card" id="card-${act.id}" style="background:${d.done?'rgba(255,255,255,0.03)':'#0f0e11'};border:1px solid ${d.done?act.color+'55':'#2a2535'}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:22px">${act.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:bold">${act.label}</div>
+          ${act.type!=='check'?`<div style="font-size:11px;color:#6B6180">Goal: ${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</div>`:''}
+        </div>
+        ${act.type==='check'?`<button class="check-btn" onclick="onCheck('${act.id}')" style="background:${d.done?act.color:'transparent'};border-color:${d.done?act.color:'#3a3550'}">${d.done?'✓':''}</button>`:''}
+      </div>
+      ${act.type!=='check'?`
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <input class="num-input" type="number" inputmode="numeric" value="${d.value}" min="0" max="${act.max}"
+            placeholder="Enter ${act.unit}" style="border-color:${met?act.color:'#3a3550'}"
+            onchange="onValChange('${act.id}',this.value)" onblur="onValChange('${act.id}',this.value)"/>
+          <span style="font-size:12px;color:#6B6180;white-space:nowrap">${act.unit}</span>
+          <span class="met-emoji" style="font-size:18px;display:${met?'inline':'none'}">✅</span>
+        </div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(pct,100)}%;background:${met?act.color:act.goalType==='under'?'#E63946':'#3a3550'}"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+          <span class="bar-left" style="font-size:11px;color:#6B6180">${d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—'}</span>
+          <span class="bar-right" style="font-size:11px;color:${met?act.color:'#6B6180'}">${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</span>
+        </div>`:''}
+      ${isEditing?`
+        <textarea class="note-ta" id="note-ta-${act.id}" placeholder="Add a note...">${d.note}</textarea>
+        <div style="display:flex;gap:8px;margin-top:7px">
+          <button class="sm-btn" onclick="onSaveNote('${act.id}')" style="background:${act.color}">Save</button>
+          <button class="sm-btn" onclick="onCancelNote()" style="background:#2a2535;color:#8A8096">Cancel</button>
+        </div>`:`
+        <div class="note-area ${d.note?'has-note':''}" onclick="onEditNote('${act.id}')">${d.note||'Tap to add a note...'}</div>`}
+    </div>`;
+}
+
+// ── Event Handlers ────────────────────────────────────────────────────────
+window.onDayClick = day => {
+  const prev=activeDay; activeDay=(activeDay===day)?null:day; editingNote=null;
+  if(prev) updateDayCard(prev); updateDayCard(day); renderDetail();
+  if(activeDay) setTimeout(()=>document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+};
+window.onCloseDetail = () => { const prev=activeDay; activeDay=null; editingNote=null; if(prev) updateDayCard(prev); renderDetail(); };
+window.onCheck = actId => {
+  days[activeDay][actId].done=!days[activeDay][actId].done;
+  schedSave(); updateActivityCard(actId); updateDayCard(activeDay); updateHeader();
+  if(ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
+};
+window.onValChange = (actId,val) => {
+  const act=ACTIVITIES.find(a=>a.id===actId), n=parseInt(val);
+  const done=val!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
+  days[activeDay][actId].value=val; days[activeDay][actId].done=done;
+  schedSave(); updateActivityCard(actId); updateDayCard(activeDay); updateHeader();
+  if(ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
+};
+window.onEditNote = actId => {
+  editingNote=actId;
+  const wrap=document.getElementById('cards-wrap');
+  if(wrap) wrap.innerHTML=ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
+  const ta=document.getElementById('note-ta-'+actId);
+  if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}
+};
+window.onSaveNote = actId => {
+  const ta=document.getElementById('note-ta-'+actId); if(ta) days[activeDay][actId].note=ta.value;
+  editingNote=null; schedSave();
+  const wrap=document.getElementById('cards-wrap'); if(wrap) wrap.innerHTML=ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
+};
+window.onCancelNote = () => {
+  editingNote=null;
+  const wrap=document.getElementById('cards-wrap'); if(wrap) wrap.innerHTML=ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
+};
+window.showCelebration = () => { document.getElementById('celebration').classList.add('show'); setTimeout(hideCelebration,3500); };
+window.hideCelebration = () => { document.getElementById('celebration').classList.remove('show'); };
+
+// ── Service Worker ────────────────────────────────────────────────────────
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/challenge/sw.js');
+</script>
+</body>
+</html>
