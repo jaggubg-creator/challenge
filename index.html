@@ -232,13 +232,36 @@ window.signOut = async () => {
 
 onAuthStateChanged(auth, async user => {
   if (user) {
-    currentUID = user.uid;
+    // Reset everything first before loading new user's data
+    currentUID  = null;
+    activeDay   = null;
+    editingNote = null;
+    days        = {};
+    clearTimeout(saveTimer);
+
+    // Clear UI immediately so old data never shows
+    document.getElementById('day-grid').innerHTML     = '';
+    document.getElementById('detail-panel').innerHTML = '';
+    document.getElementById('legend').innerHTML       = '';
+    document.getElementById('main-bar').style.width   = '0%';
+    document.getElementById('stat-pct').textContent   = '0%';
+    document.getElementById('stat-done').textContent  = '0/105';
+    document.getElementById('stat-perfect').textContent = '0';
+
+    // Show loading spinner while fetching
+    document.getElementById('day-grid').innerHTML =
+      '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:40px"><div class="spinner"></div></div>';
+
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('user-badge').style.display   = 'block';
     document.getElementById('user-badge').textContent     = '👤 ' + (user.displayName || user.email);
     document.getElementById('signout-btn').style.display  = 'block';
+
+    // Now load THIS user's data from Firestore
     const saved = await loadFromFirestore(user.uid);
-    days = initDays(saved);
+    currentUID  = user.uid;
+    days        = initDays(saved);
+
     updateHeader();
     renderGrid();
     renderLegend();
