@@ -36,14 +36,13 @@ input,textarea,button{font-family:Georgia,serif}
 .google-btn{width:100%;background:#fff;border:none;border-radius:10px;color:#333;padding:14px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:bold;margin-top:12px}
 #save-indicator{position:fixed;bottom:20px;right:20px;background:#27AE60;color:#fff;padding:8px 14px;border-radius:20px;font-size:12px;opacity:0;transition:opacity 0.3s;z-index:50;pointer-events:none}
 #save-indicator.show{opacity:1}
-#error-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#E63946;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity 0.3s;z-index:50;pointer-events:none;white-space:nowrap}
+#error-toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#E63946;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity 0.3s;z-index:50;pointer-events:none;white-space:nowrap}
 #error-toast.show{opacity:1}
 #setup-screen{position:fixed;inset:0;background:#0F0E11;z-index:190;display:none;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
 .setup-box{max-width:360px;width:100%;text-align:center}
 .date-input{width:100%;background:#0F0E11;border:1px solid #3a3550;border-radius:10px;color:#F5F0E8;padding:13px 16px;font-size:16px;outline:none;font-family:Georgia,serif;text-align:center;margin-bottom:8px}
 .date-input:focus{border-color:#7B5EA7}
 .primary-btn{width:100%;background:linear-gradient(135deg,#7B5EA7,#2E86AB);border:none;border-radius:10px;color:#fff;padding:13px;font-size:15px;cursor:pointer;font-family:Georgia,serif;font-weight:bold;margin-top:8px}
-.primary-btn:disabled{background:#2a2535;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -98,7 +97,7 @@ input,textarea,button{font-family:Georgia,serif}
 <!-- Celebration -->
 <div id="celebration">
   <div style="font-size:64px;animation:pop 0.4s ease">🎉</div>
-  <div style="font-size:26px;font-weight:bold">Perfect Day!</div>
+  <div id="celeb-day" style="font-size:26px;font-weight:bold">Perfect Day!</div>
   <div style="font-size:15px;color:#C8C0D8;max-width:300px;line-height:1.6">Every goal crushed today. You're unstoppable! 🔥</div>
   <button onclick="hideCelebration()" style="background:#7B5EA7;border:none;border-radius:10px;color:#fff;padding:12px 28px;font-size:15px;cursor:pointer;margin-top:8px">Onwards! 💪</button>
 </div>
@@ -156,7 +155,7 @@ const auth     = getAuth(firebaseApp);
 const db       = getFirestore(firebaseApp);
 const provider = new GoogleAuthProvider();
 
-
+// ── Constants ─────────────────────────────────────────────────────────────
 const TOTAL_DAYS = 21;
 const ACTIVITIES = [
   {id:'mindfulness',label:'Meditation',      icon:'🧘',color:'#7B5EA7',type:'number',goal:20,  unit:'mins', max:120,  goalType:'over'},
@@ -198,16 +197,29 @@ let startDate   = null;
 let saveTimer   = null;
 let isLoading   = false;
 
-function blankDay(){ return Object.fromEntries(ACTIVITIES.map(a=>[a.id,{done:false,note:'',value:''}])); }
+// ── Data Helpers ──────────────────────────────────────────────────────────
+function blankActivity(){ return {done:false, note:'', value:''}; }
+
+function blankDay(){
+  const d={};
+  ACTIVITIES.forEach(a=>{ d[a.id]=blankActivity(); });
+  return d;
+}
+
+// KEY FIX: always init d[i] first before setting properties
 function initDays(saved){
   const d={};
   for(let i=1;i<=TOTAL_DAYS;i++){
-    const blank=blankDay();
-    d[i]=blank; // always initialize first
-    if(saved&&saved[i]){
-      for(const act of ACTIVITIES){
-        d[i][act.id]={...blank[act.id],...(saved[i][act.id]||{})};
-      }
+    d[i]=blankDay(); // always create blank first
+    if(saved && saved[i]){
+      ACTIVITIES.forEach(a=>{
+        // safely merge each activity — never crash on missing keys
+        d[i][a.id]={
+          done:  !!(saved[i][a.id] && saved[i][a.id].done),
+          note:  (saved[i][a.id] && saved[i][a.id].note)  || '',
+          value: (saved[i][a.id] && saved[i][a.id].value) || '',
+        };
+      });
     }
   }
   return d;
@@ -219,29 +231,34 @@ function getToday(){
   const t=new Date(); t.setHours(0,0,0,0);
   const s=new Date(startDate); s.setHours(0,0,0,0);
   const diff=Math.floor((t-s)/864e5)+1;
-  if(diff<1) return null;   // not started yet
-  if(diff>TOTAL_DAYS) return null; // finished
+  if(diff<1) return null;
+  if(diff>TOTAL_DAYS) return null;
   return diff;
 }
+
 function dayLabel(n){
   if(!startDate) return '';
   const d=new Date(startDate); d.setDate(d.getDate()+n-1);
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
-function fmtDate(dateStr){
-  if(!dateStr) return '';
-  const d=new Date(dateStr);
+
+function fmtDate(str){
+  if(!str) return '';
+  const d=new Date(str);
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 }
+
 function endDateStr(){
   if(!startDate) return '';
   const d=new Date(startDate); d.setDate(d.getDate()+TOTAL_DAYS-1);
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 }
+
 function todayStr(){
   const t=new Date();
   return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
 }
+
 function isFutureDay(n){
   if(!startDate) return false;
   const t=new Date(); t.setHours(0,0,0,0);
@@ -251,31 +268,42 @@ function isFutureDay(n){
 
 // ── Firestore ─────────────────────────────────────────────────────────────
 async function loadFromFirestore(uid){
-  try{ const snap=await getDoc(doc(db,'users',uid)); return snap.exists()?snap.data():null; }
-  catch(e){ console.error('Load error:',e); return null; }
+  try{
+    const snap=await getDoc(doc(db,'users',uid));
+    return snap.exists() ? snap.data() : null;
+  } catch(e){
+    console.error('Load error:',e);
+    return null;
+  }
 }
+
 function schedSave(){
   if(!currentUID) return;
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async()=>{
     if(!currentUID) return;
     try{
-      await setDoc(doc(db,'users',currentUID),{days,startDate},{merge:true});
+      await setDoc(doc(db,'users',currentUID),{days, startDate},{merge:true});
       showToast('save');
-    } catch(e){ console.error('Save error:',e); showToast('error'); }
+    } catch(e){
+      console.error('Save error:',e);
+      showToast('error');
+    }
   },800);
 }
 
 // ── Toasts ────────────────────────────────────────────────────────────────
 function showToast(type){
   const el=document.getElementById(type==='save'?'save-indicator':'error-toast');
-  el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2000);
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2000);
 }
 
-// ── Reset / Loading ───────────────────────────────────────────────────────
+// ── Reset ─────────────────────────────────────────────────────────────────
 function resetUI(){
   clearTimeout(saveTimer);
-  days={}; activeDay=null; editingNote=null; currentUID=null; startDate=null; isLoading=false;
+  days={}; activeDay=null; editingNote=null;
+  currentUID=null; startDate=null; isLoading=false;
   document.getElementById('day-grid').innerHTML       = '';
   document.getElementById('detail-panel').innerHTML   = '';
   document.getElementById('legend').innerHTML         = '';
@@ -285,31 +313,40 @@ function resetUI(){
   document.getElementById('stat-perfect').textContent = '0';
   document.getElementById('day-label').textContent    = '';
   document.getElementById('day-msg').textContent      = '';
-  document.getElementById('challenge-dates').textContent = '';
+  document.getElementById('challenge-dates').textContent='';
   document.getElementById('user-badge').style.display  = 'none';
   document.getElementById('signout-btn').style.display = 'none';
-  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display='none';
 }
+
 function showLoading(){
   isLoading=true;
   document.getElementById('day-grid').innerHTML=
     '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:40px"><div class="spinner"></div></div>';
 }
 
-// ── Setup Screen ──────────────────────────────────────────────────────────
+// ── Setup ─────────────────────────────────────────────────────────────────
 function showSetup(){
   document.getElementById('start-date-input').value=todayStr();
   document.getElementById('setup-screen').style.display='flex';
 }
-window.onSetupToday=()=>{ document.getElementById('start-date-input').value=todayStr(); onSetupConfirm(); };
+
+window.onSetupToday=()=>{
+  document.getElementById('start-date-input').value=todayStr();
+  onSetupConfirm();
+};
+
 window.onSetupConfirm=async()=>{
   const val=document.getElementById('start-date-input').value;
   if(!val){ document.getElementById('setup-error').style.display='block'; return; }
   document.getElementById('setup-error').style.display='none';
   startDate=val;
   document.getElementById('setup-screen').style.display='none';
-  if(!Object.keys(days).length) days=initDays(null);
-  await setDoc(doc(db,'users',currentUID),{days,startDate},{merge:true});
+  // make sure days is initialized
+  if(!days || Object.keys(days).length===0) days=initDays(null);
+  try{
+    await setDoc(doc(db,'users',currentUID),{days,startDate},{merge:true});
+  } catch(e){ console.error('Setup save error:',e); }
   updateHeader(); renderGrid(); renderLegend();
 };
 
@@ -321,13 +358,16 @@ window.signInWithGoogle=async()=>{
   document.getElementById('login-status').textContent='Signing in...';
   try{ await signInWithPopup(auth,provider); }
   catch(e){
-    console.error(e); btn.disabled=false;
+    console.error('Login error:',e);
+    btn.disabled=false;
     document.getElementById('login-spinner').style.display='none';
     document.getElementById('login-status').textContent='⚠ Sign in failed. Please try again.';
   }
 };
+
 window.signOut=async()=>{
-  clearTimeout(saveTimer); currentUID=null;
+  clearTimeout(saveTimer);
+  currentUID=null;
   resetUI();
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-status').textContent='Sign in to get started';
@@ -336,57 +376,47 @@ window.signOut=async()=>{
   await fbSignOut(auth);
 };
 
-onAuthStateChanged(auth,async user=>{
+onAuthStateChanged(auth, async user=>{
   if(user){
-    resetUI(); showLoading();
+    resetUI();
+    showLoading();
     document.getElementById('login-screen').style.display='none';
     document.getElementById('user-badge').style.display='block';
     document.getElementById('user-badge').textContent='👤 '+(user.displayName||user.email);
     document.getElementById('signout-btn').style.display='block';
-    document.getElementById('login-status').textContent='Sign in to get started';
     document.getElementById('google-btn').disabled=false;
     document.getElementById('login-spinner').style.display='none';
 
-    let saved = null;
-    try {
-      saved = await loadFromFirestore(user.uid);
-      console.log('Loaded from Firestore:', JSON.stringify(saved).substring(0,200));
-    } catch(e) {
-      console.error('Firestore load failed:', e);
-      document.getElementById('day-grid').innerHTML =
-        `<div style="grid-column:1/-1;text-align:center;padding:30px;color:#E63946;font-size:13px">
-          ⚠ Could not load your data. Please check your internet connection and refresh.
-        </div>`;
-      return;
-    }
-
-    currentUID = user.uid;
-    console.log('currentUID set:', currentUID);
+    // Load data
+    const saved=await loadFromFirestore(user.uid);
+    currentUID=user.uid; // set AFTER load
 
     if(saved && saved.startDate){
-      console.log('Case 1: returning user with startDate');
-      startDate = saved.startDate;
-      days = initDays(saved.days || null);
-      isLoading = false;
+      // Returning user — new structure
+      startDate=saved.startDate;
+      days=initDays(saved.days || null);
+      isLoading=false;
       updateHeader(); renderGrid(); renderLegend();
+
     } else if(saved && !saved.startDate && saved.days){
-      console.log('Case 2: has days but no startDate');
-      days = initDays(saved.days);
-      isLoading = false;
+      // Has days but no startDate
+      days=initDays(saved.days);
+      isLoading=false;
       document.getElementById('day-grid').innerHTML='';
       showSetup();
+
     } else if(saved && !saved.startDate && !saved.days){
-      console.log('Case 3: old structure check');
-      const hasDayKeys = Object.keys(saved).some(k=>!isNaN(k)&&parseInt(k)>=1&&parseInt(k)<=21);
-      console.log('hasDayKeys:', hasDayKeys);
-      days = hasDayKeys ? initDays(saved) : initDays(null);
-      isLoading = false;
+      // Old structure — days as top-level numeric keys
+      const hasDayKeys=Object.keys(saved).some(k=>!isNaN(k)&&+k>=1&&+k<=21);
+      days=initDays(hasDayKeys ? saved : null);
+      isLoading=false;
       document.getElementById('day-grid').innerHTML='';
       showSetup();
+
     } else {
-      console.log('Case 4: brand new user');
-      days = initDays(null);
-      isLoading = false;
+      // Brand new user
+      days=initDays(null);
+      isLoading=false;
       document.getElementById('day-grid').innerHTML='';
       showSetup();
     }
@@ -396,85 +426,135 @@ onAuthStateChanged(auth,async user=>{
   }
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────
-function completion(day){ return ACTIVITIES.filter(a=>days[day]&&days[day][a.id]&&days[day][a.id].done).length; }
-function totalDone(){ let c=0; for(let i=1;i<=TOTAL_DAYS;i++) ACTIVITIES.forEach(a=>{if(days[i]&&days[i][a.id]&&days[i][a.id].done)c++;}); return c; }
-function perfectDays(){ let c=0; for(let i=1;i<=TOTAL_DAYS;i++) if(completion(i)===ACTIVITIES.length)c++; return c; }
+// ── Stats ─────────────────────────────────────────────────────────────────
+function completion(day){
+  if(!days[day]) return 0;
+  return ACTIVITIES.filter(a=>days[day][a.id] && days[day][a.id].done).length;
+}
+function totalDone(){
+  let c=0;
+  for(let i=1;i<=TOTAL_DAYS;i++)
+    ACTIVITIES.forEach(a=>{ if(days[i]&&days[i][a.id]&&days[i][a.id].done) c++; });
+  return c;
+}
+function perfectDays(){
+  let c=0;
+  for(let i=1;i<=TOTAL_DAYS;i++) if(completion(i)===ACTIVITIES.length) c++;
+  return c;
+}
 
 // ── Header ────────────────────────────────────────────────────────────────
 function updateHeader(){
-  const today=getToday(), done=totalDone(), total=TOTAL_DAYS*ACTIVITIES.length, pct=Math.round((done/total)*100);
+  const today=getToday();
+  const done=totalDone(), total=TOTAL_DAYS*ACTIVITIES.length;
+  const pct=Math.round((done/total)*100);
   document.getElementById('challenge-dates').textContent=`${fmtDate(startDate)} – ${endDateStr()}`;
+  document.getElementById('stat-pct').textContent=pct+'%';
+  document.getElementById('stat-done').textContent=done+'/'+total;
+  document.getElementById('stat-perfect').textContent=perfectDays();
+  document.getElementById('main-bar').style.width=pct+'%';
+
   if(today===null){
     const t=new Date(); t.setHours(0,0,0,0);
     const s=new Date(startDate); s.setHours(0,0,0,0);
     const diff=Math.floor((t-s)/864e5)+1;
     if(diff<1){
       const daysLeft=Math.abs(diff)+1;
-      document.getElementById('day-label').textContent='CHALLENGE NOT STARTED YET';
-      document.getElementById('day-msg').textContent=`Your challenge begins on ${fmtDate(startDate)}. ${daysLeft} day${daysLeft>1?'s':''} to go — get ready! 🚀`;
+      document.getElementById('day-label').textContent='NOT STARTED YET';
+      document.getElementById('day-msg').textContent=
+        `Your challenge begins on ${fmtDate(startDate)}. ${daysLeft} day${daysLeft>1?'s':''} to go — get ready! 🚀`;
     } else {
       document.getElementById('day-label').textContent='CHALLENGE COMPLETE 🏅';
       document.getElementById('day-msg').textContent='You completed your 21-day challenge! Incredible achievement!';
     }
   } else {
     document.getElementById('day-label').textContent=`DAY ${today} · ${dayLabel(today).toUpperCase()}`;
-    document.getElementById('day-msg').textContent=MESSAGES[today];
+    document.getElementById('day-msg').textContent=MESSAGES[today]||'';
   }
-  document.getElementById('stat-pct').textContent=pct+'%';
-  document.getElementById('stat-done').textContent=done+'/'+total;
-  document.getElementById('stat-perfect').textContent=perfectDays();
-  document.getElementById('main-bar').style.width=pct+'%';
 }
 
-// ── Day Card ──────────────────────────────────────────────────────────────
+// ── Day Card Update ───────────────────────────────────────────────────────
 function updateDayCard(day){
   const el=document.getElementById('day-'+day); if(!el) return;
-  const today=getToday(), done=completion(day), full=done===ACTIVITIES.length;
+  const today=getToday();
+  const done=completion(day), full=done===ACTIVITIES.length;
   const isActive=activeDay===day, isToday=day===today, future=isFutureDay(day);
   el.style.background  = isActive?'linear-gradient(135deg,#2a1f45,#1a2a3a)':full?'#1e1535':'#1a1825';
   el.style.borderColor = isActive?'#7B5EA7':isToday?'#F4A261':full?'rgba(123,94,167,0.4)':'#2a2535';
   el.style.transform   = isActive?'scale(1.06)':'scale(1)';
   el.style.opacity     = future?'0.4':'1';
   const dotWrap=el.querySelector('.dots');
-  if(dotWrap) ACTIVITIES.forEach((a,i)=>{ if(dotWrap.children[i]) dotWrap.children[i].style.background=days[day]&&days[day][a.id]&&days[day][a.id].done?a.color:'#2a2535'; });
-  const star=el.querySelector('.star'); if(star) star.style.display=full?'block':'none';
+  if(dotWrap){
+    ACTIVITIES.forEach((a,i)=>{
+      if(dotWrap.children[i])
+        dotWrap.children[i].style.background=days[day]&&days[day][a.id]&&days[day][a.id].done?a.color:'#2a2535';
+    });
+  }
+  const star=el.querySelector('.star');
+  if(star) star.style.display=full?'block':'none';
 }
 
-// ── Activity Card ─────────────────────────────────────────────────────────
+// ── Activity Card Update ──────────────────────────────────────────────────
 function updateActivityCard(actId){
   if(!activeDay||!days[activeDay]) return;
-  const act=ACTIVITIES.find(a=>a.id===actId), d=days[activeDay][actId];
-  const card=document.getElementById('card-'+actId); if(!card||!d) return;
+  const act=ACTIVITIES.find(a=>a.id===actId);
+  const d=days[activeDay][actId];
+  const card=document.getElementById('card-'+actId);
+  if(!card||!d||!act) return;
+
   card.style.background  = d.done?'rgba(255,255,255,0.03)':'#0f0e11';
   card.style.borderColor = d.done?act.color+'55':'#2a2535';
+
   if(act.type==='check'){
     const btn=card.querySelector('.check-btn');
-    if(btn){btn.style.background=d.done?act.color:'transparent';btn.style.borderColor=d.done?act.color:'#3a3550';btn.textContent=d.done?'✓':'';}
+    if(btn){
+      btn.style.background=d.done?act.color:'transparent';
+      btn.style.borderColor=d.done?act.color:'#3a3550';
+      btn.textContent=d.done?'✓':'';
+    }
     return;
   }
-  const n=parseInt(d.value), met=d.value!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
-  const inp=card.querySelector('.num-input'); if(inp) inp.style.borderColor=met?act.color:'#3a3550';
-  const bar=card.querySelector('.bar-fill'), pct=d.value?Math.min(100,Math.round((n/act.max)*100)):0;
-  if(bar){bar.style.width=Math.min(pct,100)+'%';bar.style.background=met?act.color:(act.goalType==='under'?'#E63946':'#3a3550');}
-  const left=card.querySelector('.bar-left'), right=card.querySelector('.bar-right');
-  if(left)  left.textContent =d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—';
+
+  const n=parseInt(d.value);
+  const met=d.value!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
+  const pct=d.value?Math.min(100,Math.round((n/act.max)*100)):0;
+
+  const inp=card.querySelector('.num-input');
+  if(inp) inp.style.borderColor=met?act.color:'#3a3550';
+
+  const bar=card.querySelector('.bar-fill');
+  if(bar){
+    bar.style.width=Math.min(pct,100)+'%';
+    bar.style.background=met?act.color:(act.goalType==='under'?'#E63946':'#3a3550');
+  }
+
+  const left=card.querySelector('.bar-left');
+  if(left) left.textContent=d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—';
+
+  const right=card.querySelector('.bar-right');
   if(right) right.style.color=met?act.color:'#6B6180';
-  const emo=card.querySelector('.met-emoji'); if(emo) emo.style.display=met?'inline':'none';
+
+  const emo=card.querySelector('.met-emoji');
+  if(emo) emo.style.display=met?'inline':'none';
 }
 
 // ── Render Grid ───────────────────────────────────────────────────────────
 function renderGrid(){
-  const today=getToday(), grid=document.getElementById('day-grid');
+  const today=getToday();
+  const grid=document.getElementById('day-grid');
   grid.innerHTML='';
   for(let day=1;day<=TOTAL_DAYS;day++){
     const done=completion(day), full=done===ACTIVITIES.length;
     const isToday=day===today, future=isFutureDay(day);
     const btn=document.createElement('button');
-    btn.className='day-btn day-card'; btn.id='day-'+day; btn.onclick=()=>onDayClick(day);
+    btn.className='day-btn day-card';
+    btn.id='day-'+day;
+    btn.onclick=()=>onDayClick(day);
     btn.style.opacity=future?'0.4':'1';
     btn.innerHTML=`
-      <div style="font-size:9px;color:${isToday?'#F4A261':'#5a5575'};letter-spacing:1px;margin-bottom:3px">${isToday?'TODAY':dayLabel(day)}</div>
+      <div style="font-size:9px;color:${isToday?'#F4A261':'#5a5575'};letter-spacing:1px;margin-bottom:3px">
+        ${isToday?'TODAY':dayLabel(day)}
+      </div>
       <div style="font-size:19px;font-weight:bold;line-height:1">${day}</div>
       <div class="dots" style="margin-top:7px;display:flex;justify-content:center;gap:2px;flex-wrap:wrap">
         ${ACTIVITIES.map(a=>`<div style="width:5px;height:5px;border-radius:50%;background:${days[day]&&days[day][a.id]&&days[day][a.id].done?a.color:'#2a2535'}"></div>`).join('')}
@@ -495,19 +575,21 @@ function renderLegend(){
 // ── Render Detail ─────────────────────────────────────────────────────────
 function renderDetail(){
   const panel=document.getElementById('detail-panel');
-  if(!activeDay){panel.innerHTML='';return;}
+  if(!activeDay){ panel.innerHTML=''; return; }
   const day=activeDay;
   panel.innerHTML=`
     <div style="margin-top:20px;background:#1a1825;border:1px solid #2a2535;border-radius:16px;overflow:hidden;animation:fadeUp 0.2s ease">
       <div style="padding:18px 20px 14px;border-bottom:1px solid #2a2535;display:flex;align-items:center;justify-content:space-between">
         <div>
-          <div style="font-size:10px;letter-spacing:3px;color:#6B6180;text-transform:uppercase">${day===getToday()?'Today':dayLabel(day)}</div>
+          <div style="font-size:10px;letter-spacing:3px;color:#6B6180;text-transform:uppercase">
+            ${day===getToday()?'Today':dayLabel(day)}
+          </div>
           <div style="font-size:20px;font-weight:bold">Day ${day}</div>
         </div>
         <button onclick="onCloseDetail()" style="background:#2a2535;border:none;border-radius:8px;color:#8A8096;cursor:pointer;padding:7px 12px;font-size:13px">✕</button>
       </div>
       <div style="margin:14px 20px 0;background:rgba(123,94,167,0.07);border:1px solid rgba(123,94,167,0.18);border-radius:10px;padding:11px 14px;font-size:13px;color:#C8C0D8;font-style:italic;line-height:1.6">
-        ${MESSAGES[day]}
+        ${MESSAGES[day]||''}
       </div>
       <div style="padding:14px 20px 20px" id="cards-wrap">
         ${ACTIVITIES.map(a=>renderCard(a,day)).join('')}
@@ -517,91 +599,158 @@ function renderDetail(){
 
 // ── Render Card ───────────────────────────────────────────────────────────
 function renderCard(act,day){
-  if(!days[day]) return '';
-  const d=days[day][act.id]||{done:false,note:'',value:''};
-  const n=parseInt(d.value), met=d.value!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
+  // Safe fallback if day data missing
+  const d=(days[day]&&days[day][act.id]) ? days[day][act.id] : blankActivity();
+  const n=parseInt(d.value);
+  const met=d.value!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
   const pct=d.value?Math.min(100,Math.round((n/act.max)*100)):0;
   const isEditing=editingNote===act.id;
   return `
-    <div class="act-card" id="card-${act.id}" style="background:${d.done?'rgba(255,255,255,0.03)':'#0f0e11'};border:1px solid ${d.done?act.color+'55':'#2a2535'}">
+    <div class="act-card" id="card-${act.id}"
+      style="background:${d.done?'rgba(255,255,255,0.03)':'#0f0e11'};
+             border:1px solid ${d.done?act.color+'55':'#2a2535'}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="font-size:22px">${act.icon}</span>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:bold">${act.label}</div>
-          ${act.type!=='check'?`<div style="font-size:11px;color:#6B6180">Goal: ${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</div>`:''}
+          ${act.type!=='check'?`<div style="font-size:11px;color:#6B6180">
+            Goal: ${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}
+          </div>`:''}
         </div>
-        ${act.type==='check'?`<button class="check-btn" onclick="onCheck('${act.id}')" style="background:${d.done?act.color:'transparent'};border-color:${d.done?act.color:'#3a3550'}">${d.done?'✓':''}</button>`:''}
+        ${act.type==='check'?`
+          <button class="check-btn" onclick="onCheck('${act.id}')"
+            style="background:${d.done?act.color:'transparent'};
+                   border-color:${d.done?act.color:'#3a3550'}">
+            ${d.done?'✓':''}
+          </button>`:''}
       </div>
       ${act.type!=='check'?`
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <input class="num-input" type="number" inputmode="numeric" value="${d.value}" min="0" max="${act.max}"
-            placeholder="Enter ${act.unit}" style="border-color:${met?act.color:'#3a3550'}"
-            onchange="onValChange('${act.id}',this.value)" onblur="onValChange('${act.id}',this.value)"/>
+          <input class="num-input" type="number" inputmode="numeric"
+            value="${d.value}" min="0" max="${act.max}"
+            placeholder="Enter ${act.unit}"
+            style="border-color:${met?act.color:'#3a3550'}"
+            onchange="onValChange('${act.id}',this.value)"
+            onblur="onValChange('${act.id}',this.value)"/>
           <span style="font-size:12px;color:#6B6180;white-space:nowrap">${act.unit}</span>
           <span class="met-emoji" style="font-size:18px;display:${met?'inline':'none'}">✅</span>
         </div>
-        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(pct,100)}%;background:${met?act.color:act.goalType==='under'?'#E63946':'#3a3550'}"></div></div>
+        <div class="bar-wrap">
+          <div class="bar-fill" style="width:${Math.min(pct,100)}%;
+            background:${met?act.color:act.goalType==='under'?'#E63946':'#3a3550'}">
+          </div>
+        </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-          <span class="bar-left" style="font-size:11px;color:#6B6180">${d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—'}</span>
-          <span class="bar-right" style="font-size:11px;color:${met?act.color:'#6B6180'}">${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}</span>
+          <span class="bar-left" style="font-size:11px;color:#6B6180">
+            ${d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—'}
+          </span>
+          <span class="bar-right" style="font-size:11px;color:${met?act.color:'#6B6180'}">
+            ${act.goalType==='under'?'≤':'≥'} ${act.goal.toLocaleString()} ${act.unit}
+          </span>
         </div>`:''}
       ${isEditing?`
-        <textarea class="note-ta" id="note-ta-${act.id}" placeholder="Add a note...">${d.note||''}</textarea>
+        <textarea class="note-ta" id="note-ta-${act.id}"
+          placeholder="Add a note...">${d.note||''}</textarea>
         <div style="display:flex;gap:8px;margin-top:7px">
-          <button class="sm-btn" onclick="onSaveNote('${act.id}')" style="background:${act.color}">Save</button>
-          <button class="sm-btn" onclick="onCancelNote()" style="background:#2a2535;color:#8A8096">Cancel</button>
+          <button class="sm-btn" onclick="onSaveNote('${act.id}')"
+            style="background:${act.color}">Save</button>
+          <button class="sm-btn" onclick="onCancelNote()"
+            style="background:#2a2535;color:#8A8096">Cancel</button>
         </div>`:`
-        <div class="note-area ${d.note?'has-note':''}" onclick="onEditNote('${act.id}')">${d.note||'Tap to add a note...'}</div>`}
+        <div class="note-area ${d.note?'has-note':''}"
+          onclick="onEditNote('${act.id}')">
+          ${d.note||'Tap to add a note...'}
+        </div>`}
     </div>`;
 }
 
 // ── Event Handlers ────────────────────────────────────────────────────────
 window.onDayClick=day=>{
   if(isLoading||!days[day]) return;
-  const prev=activeDay; activeDay=(activeDay===day)?null:day; editingNote=null;
-  if(prev) updateDayCard(prev); updateDayCard(day); renderDetail();
-  if(activeDay) setTimeout(()=>document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+  const prev=activeDay;
+  activeDay=(activeDay===day)?null:day;
+  editingNote=null;
+  if(prev) updateDayCard(prev);
+  updateDayCard(day);
+  renderDetail();
+  if(activeDay)
+    setTimeout(()=>document.getElementById('detail-panel')
+      .scrollIntoView({behavior:'smooth',block:'nearest'}),50);
 };
-window.onCloseDetail=()=>{ const prev=activeDay; activeDay=null; editingNote=null; if(prev) updateDayCard(prev); renderDetail(); };
+
+window.onCloseDetail=()=>{
+  const prev=activeDay;
+  activeDay=null; editingNote=null;
+  if(prev) updateDayCard(prev);
+  renderDetail();
+};
+
 window.onCheck=actId=>{
   if(!activeDay||!currentUID||!days[activeDay]) return;
   days[activeDay][actId].done=!days[activeDay][actId].done;
-  schedSave(); updateActivityCard(actId); updateDayCard(activeDay); updateHeader();
-  if(ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
+  schedSave();
+  updateActivityCard(actId);
+  updateDayCard(activeDay);
+  updateHeader();
+  if(ACTIVITIES.every(a=>days[activeDay][a.id]&&days[activeDay][a.id].done)){
+    document.getElementById('celeb-day').textContent=`Perfect Day ${activeDay}!`;
+    showCelebration();
+  }
 };
+
 window.onValChange=(actId,val)=>{
   if(!activeDay||!currentUID||!days[activeDay]) return;
-  const act=ACTIVITIES.find(a=>a.id===actId), n=parseInt(val);
+  const act=ACTIVITIES.find(a=>a.id===actId);
+  if(!act) return;
+  const n=parseInt(val);
   const done=val!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
-  days[activeDay][actId].value=val; days[activeDay][actId].done=done;
-  schedSave(); updateActivityCard(actId); updateDayCard(activeDay); updateHeader();
-  if(ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
+  days[activeDay][actId].value=val;
+  days[activeDay][actId].done=done;
+  schedSave();
+  updateActivityCard(actId);
+  updateDayCard(activeDay);
+  updateHeader();
+  if(ACTIVITIES.every(a=>days[activeDay][a.id]&&days[activeDay][a.id].done)){
+    document.getElementById('celeb-day').textContent=`Perfect Day ${activeDay}!`;
+    showCelebration();
+  }
 };
+
 window.onEditNote=actId=>{
   if(!activeDay||isLoading) return;
   editingNote=actId;
   const wrap=document.getElementById('cards-wrap');
   if(wrap) wrap.innerHTML=ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
   const ta=document.getElementById('note-ta-'+actId);
-  if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}
+  if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); }
 };
+
 window.onSaveNote=actId=>{
   if(!activeDay||!currentUID) return;
   const ta=document.getElementById('note-ta-'+actId);
   if(ta) days[activeDay][actId].note=ta.value;
-  editingNote=null; schedSave();
+  editingNote=null;
+  schedSave();
   const wrap=document.getElementById('cards-wrap');
   if(wrap) wrap.innerHTML=ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
 };
+
 window.onCancelNote=()=>{
   editingNote=null;
   const wrap=document.getElementById('cards-wrap');
   if(wrap) wrap.innerHTML=ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
 };
-window.showCelebration=()=>{ document.getElementById('celebration').classList.add('show'); setTimeout(hideCelebration,3500); };
-window.hideCelebration=()=>{ document.getElementById('celebration').classList.remove('show'); };
 
-if('serviceWorker' in navigator) navigator.serviceWorker.register('/challenge/sw.js');
+window.showCelebration=()=>{
+  document.getElementById('celebration').classList.add('show');
+  setTimeout(hideCelebration,3500);
+};
+window.hideCelebration=()=>{
+  document.getElementById('celebration').classList.remove('show');
+};
+
+if('serviceWorker' in navigator)
+  navigator.serviceWorker.register('/challenge/sw.js');
 </script>
 </body>
 </html>
