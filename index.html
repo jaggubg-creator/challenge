@@ -72,21 +72,63 @@ input,textarea,button{font-family:Georgia,serif}
 <!-- Setup Screen -->
 <div id="setup-screen">
   <div class="setup-box">
-    <div style="font-size:48px;margin-bottom:16px">📅</div>
-    <h2 style="font-size:22px;font-weight:normal;margin-bottom:8px">When does your challenge start?</h2>
-    <p style="color:#8A8096;font-size:13px;margin-bottom:28px;line-height:1.6">
-      Pick your start date. Your 21-day journey will be counted from this day.
-    </p>
-    <div style="background:#1a1825;border:1px solid #2a2535;border-radius:16px;padding:24px">
-      <label style="display:block;font-size:11px;letter-spacing:3px;color:#7B5EA7;text-transform:uppercase;margin-bottom:12px;text-align:left">Start Date</label>
-      <input type="date" id="start-date-input" class="date-input"/>
-      <p id="setup-error" style="color:#E63946;font-size:12px;margin-top:4px;display:none">Please pick a valid date</p>
-      <button class="primary-btn" onclick="onSetupConfirm()">Start My Challenge →</button>
-      <button onclick="onSetupToday()" style="width:100%;background:transparent;border:1px solid #2a2535;border-radius:10px;color:#8A8096;padding:11px;font-size:13px;cursor:pointer;margin-top:10px">
-        🌅 Start Today
-      </button>
+
+    <!-- Step 1: Activities -->
+    <div id="setup-step-1">
+      <div style="font-size:48px;margin-bottom:16px">✏️</div>
+      <h2 style="font-size:22px;font-weight:normal;margin-bottom:8px">Set Your Activities</h2>
+      <p style="color:#8A8096;font-size:13px;margin-bottom:20px;line-height:1.6">
+        Choose 3–7 daily habits to track. Customize the name, icon, and goal.
+      </p>
+      <div style="background:#1a1825;border:1px solid #2a2535;border-radius:16px;padding:20px">
+        <div id="activity-list" style="margin-bottom:12px"></div>
+        <button onclick="addActivity()" id="add-act-btn" style="width:100%;background:transparent;border:1px dashed #3a3550;border-radius:10px;color:#7B5EA7;padding:10px;font-size:13px;cursor:pointer">+ Add Activity</button>
+        <p id="act-count-msg" style="color:#8A8096;font-size:12px;margin-top:10px;text-align:center"></p>
+        <button class="primary-btn" onclick="goToStep2()">Next: Set Start Date →</button>
+      </div>
     </div>
-    <p style="color:#4a4560;font-size:11px;margin-top:16px">You can't change this later, so choose carefully!</p>
+
+    <!-- Step 2: Date -->
+    <div id="setup-step-2" style="display:none">
+      <div style="font-size:48px;margin-bottom:16px">📅</div>
+      <h2 style="font-size:22px;font-weight:normal;margin-bottom:8px">When does your challenge start?</h2>
+      <p style="color:#8A8096;font-size:13px;margin-bottom:28px;line-height:1.6">
+        Pick your start date. Your 21-day journey will be counted from this day.
+      </p>
+      <div style="background:#1a1825;border:1px solid #2a2535;border-radius:16px;padding:24px">
+        <label style="display:block;font-size:11px;letter-spacing:3px;color:#7B5EA7;text-transform:uppercase;margin-bottom:12px;text-align:left">Start Date</label>
+        <input type="date" id="start-date-input" class="date-input"/>
+        <p id="setup-error" style="color:#E63946;font-size:12px;margin-top:4px;display:none">Please pick a valid date</p>
+        <button class="primary-btn" onclick="onSetupConfirm()">Start My Challenge →</button>
+        <button onclick="onSetupToday()" style="width:100%;background:transparent;border:1px solid #2a2535;border-radius:10px;color:#8A8096;padding:11px;font-size:13px;cursor:pointer;margin-top:10px">
+          🌅 Start Today
+        </button>
+        <button onclick="backToStep1()" style="width:100%;background:transparent;border:none;color:#4a4560;padding:8px;font-size:12px;cursor:pointer;margin-top:6px">← Back to Activities</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:195;display:none;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#1a1825;border:1px solid #2a2535;border-radius:20px;padding:28px;max-width:340px;width:100%;text-align:center">
+    <h3 style="font-size:18px;font-weight:normal;margin-bottom:8px">⚙ Settings</h3>
+    <p style="color:#8A8096;font-size:12px;margin-bottom:24px">Manage your 21-day challenge</p>
+
+    <button onclick="onChangeDate()" style="width:100%;background:#2a2535;border:none;border-radius:10px;color:#C8C0D8;padding:13px;font-size:14px;cursor:pointer;margin-bottom:10px;text-align:left">
+      📅 Change Start Date <span style="float:right;color:#7B5EA7" id="current-start-display"></span>
+    </button>
+
+    <button onclick="onRestartChallenge()" style="width:100%;background:#2a2535;border:none;border-radius:10px;color:#C8C0D8;padding:13px;font-size:14px;cursor:pointer;margin-bottom:10px;text-align:left">
+      🔄 Restart Challenge <span style="float:right;font-size:11px;color:#6B6180">resets all progress</span>
+    </button>
+
+    <button onclick="onEditActivities()" style="width:100%;background:#2a2535;border:none;border-radius:10px;color:#C8C0D8;padding:13px;font-size:14px;cursor:pointer;margin-bottom:20px;text-align:left">
+      ✏️ Edit Activities <span style="float:right;font-size:11px;color:#6B6180">resets all progress</span>
+    </button>
+
+    <button onclick="closeSettingsModal()" style="width:100%;background:transparent;border:1px solid #2a2535;border-radius:10px;color:#8A8096;padding:11px;font-size:13px;cursor:pointer">Close</button>
   </div>
 </div>
 
@@ -108,11 +150,14 @@ input,textarea,button{font-family:Georgia,serif}
   <div style="position:relative;z-index:1">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div id="user-badge" style="background:rgba(123,94,167,0.2);border-radius:20px;padding:6px 14px;font-size:13px;color:#C8C0D8;display:none;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-      <button onclick="signOut()" id="signout-btn" style="background:#2a2535;border:none;border-radius:20px;color:#8A8096;cursor:pointer;padding:6px 14px;font-size:12px;display:none;margin-left:auto;flex-shrink:0">Sign Out</button>
+      <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0">
+        <button onclick="showSettingsModal()" id="settings-btn" style="background:#2a2535;border:none;border-radius:20px;color:#8A8096;cursor:pointer;padding:6px 14px;font-size:12px;display:none">⚙ Settings</button>
+        <button onclick="signOut()" id="signout-btn" style="background:#2a2535;border:none;border-radius:20px;color:#8A8096;cursor:pointer;padding:6px 14px;font-size:12px;display:none">Sign Out</button>
+      </div>
     </div>
     <div style="font-size:10px;letter-spacing:4px;color:#7B5EA7;text-transform:uppercase;margin-bottom:6px" id="challenge-dates"></div>
     <h1 style="font-size:clamp(24px,6vw,38px);font-weight:normal;margin:0 0 4px;letter-spacing:-1px">21-Day Challenge</h1>
-    <p style="color:#6B6180;font-size:13px;margin:0 0 18px">Mind · Read · Screen · Rise · Steps</p>
+    <p style="color:#6B6180;font-size:13px;margin:0 0 18px" id="activities-subtitle">Mind · Read · Screen · Rise · Steps</p>
     <div style="background:rgba(123,94,167,0.1);border:1px solid rgba(123,94,167,0.25);border-radius:12px;padding:12px 16px;max-width:480px;margin:0 auto 20px;font-size:13px;color:#D4CCE8;line-height:1.6;font-style:italic">
       <span id="day-label" style="color:#7B5EA7;font-style:normal;font-weight:bold;font-size:10px;letter-spacing:2px;display:block;margin-bottom:5px"></span>
       <span id="day-msg"></span>
@@ -157,13 +202,17 @@ const provider = new GoogleAuthProvider();
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const TOTAL_DAYS = 21;
-const ACTIVITIES = [
+const ACTIVITY_COLORS = ['#7B5EA7','#2E86AB','#E63946','#F4A261','#27AE60','#E67E22','#16A085'];
+const DEFAULT_ACTIVITIES = [
   {id:'mindfulness',label:'Meditation',      icon:'🧘',color:'#7B5EA7',type:'number',goal:20,  unit:'mins', max:120,  goalType:'over'},
   {id:'reading',    label:'Reading',         icon:'📚',color:'#2E86AB',type:'number',goal:30,  unit:'pages',max:200,  goalType:'over'},
   {id:'screentime', label:'Screen Time',     icon:'📵',color:'#E63946',type:'number',goal:120, unit:'mins', max:480,  goalType:'under'},
   {id:'wakeup',     label:'Wake Up by 6 AM', icon:'🌅',color:'#F4A261',type:'check'},
   {id:'steps',      label:'6,000 Steps',     icon:'👟',color:'#27AE60',type:'number',goal:6000,unit:'steps',max:20000,goalType:'over'},
 ];
+let ACTIVITIES = [...DEFAULT_ACTIVITIES];
+// Draft activities being edited in setup
+let draftActivities = [];
 const MESSAGES = {
   1:"Every journey begins with a single step. You've taken yours — welcome to Day 1! 🌱",
   2:"Two days in! Momentum is quietly building. Keep showing up. 💪",
@@ -283,7 +332,7 @@ function schedSave(){
   saveTimer=setTimeout(async()=>{
     if(!currentUID) return;
     try{
-      await setDoc(doc(db,'users',currentUID),{days, startDate},{merge:true});
+      await setDoc(doc(db,'users',currentUID),{days, startDate, activities: ACTIVITIES},{merge:true});
       showToast('save');
     } catch(e){
       console.error('Save error:',e);
@@ -309,13 +358,14 @@ function resetUI(){
   document.getElementById('legend').innerHTML         = '';
   document.getElementById('main-bar').style.width     = '0%';
   document.getElementById('stat-pct').textContent     = '0%';
-  document.getElementById('stat-done').textContent    = '0/105';
+  document.getElementById('stat-done').textContent    = '0/—';
   document.getElementById('stat-perfect').textContent = '0';
   document.getElementById('day-label').textContent    = '';
   document.getElementById('day-msg').textContent      = '';
   document.getElementById('challenge-dates').textContent='';
   document.getElementById('user-badge').style.display  = 'none';
   document.getElementById('signout-btn').style.display = 'none';
+  document.getElementById('settings-btn').style.display = 'none';
   document.getElementById('setup-screen').style.display='none';
 }
 
@@ -325,10 +375,108 @@ function showLoading(){
     '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:40px"><div class="spinner"></div></div>';
 }
 
-// ── Setup ─────────────────────────────────────────────────────────────────
-function showSetup(){
+// ── Activity Editor ───────────────────────────────────────────────────────
+const EMOJI_OPTIONS = ['🧘','📚','📵','🌅','👟','💧','🏃','🥗','✍️','🎯','💪','🛌','🧠','🎵','🌿','⏰','📝','🚴','🏊','🍎'];
+
+function makeActivityId(label){
+  return label.toLowerCase().replace(/[^a-z0-9]/g,'_').substring(0,20)+'_'+Date.now();
+}
+
+function renderActivityEditor(){
+  const list = document.getElementById('activity-list');
+  const count = draftActivities.length;
+  document.getElementById('add-act-btn').style.display = count >= 7 ? 'none' : 'block';
+  document.getElementById('act-count-msg').textContent = `${count} of 3–7 activities`;
+
+  list.innerHTML = draftActivities.map((act, idx) => `
+    <div style="background:#0f0e11;border:1px solid #2a2535;border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <select onchange="draftActivities[${idx}].icon=this.value" style="background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px;font-size:18px;width:54px;cursor:pointer">
+          ${EMOJI_OPTIONS.map(e=>`<option value="${e}" ${act.icon===e?'selected':''}>${e}</option>`).join('')}
+        </select>
+        <input type="text" value="${act.label}" maxlength="25" placeholder="Activity name"
+          oninput="draftActivities[${idx}].label=this.value"
+          style="flex:1;background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:8px 10px;font-size:14px;outline:none;font-family:Georgia,serif"/>
+        ${count > 3 ? `<button onclick="removeActivity(${idx})" style="background:#2a2535;border:none;border-radius:6px;color:#E63946;padding:6px 10px;cursor:pointer;font-size:14px">✕</button>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select onchange="onDraftTypeChange(${idx},this.value)" style="background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px 8px;font-size:12px;cursor:pointer">
+          <option value="check" ${act.type==='check'?'selected':''}>✅ Checkbox</option>
+          <option value="number_over" ${act.type==='number'&&act.goalType==='over'?'selected':''}>📈 At least</option>
+          <option value="number_under" ${act.type==='number'&&act.goalType==='under'?'selected':''}>📉 At most</option>
+        </select>
+        ${act.type==='number'?`
+          <input type="number" value="${act.goal}" min="1" placeholder="Goal" oninput="draftActivities[${idx}].goal=+this.value"
+            style="width:80px;background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px 8px;font-size:12px;outline:none;font-family:Georgia,serif"/>
+          <input type="text" value="${act.unit}" maxlength="8" placeholder="unit" oninput="draftActivities[${idx}].unit=this.value"
+            style="width:64px;background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px 8px;font-size:12px;outline:none;font-family:Georgia,serif"/>
+        `:''}
+      </div>
+    </div>`).join('');
+}
+
+window.onDraftTypeChange=(idx, val)=>{
+  if(val==='check'){
+    draftActivities[idx].type='check';
+    delete draftActivities[idx].goalType;
+    delete draftActivities[idx].goal;
+    delete draftActivities[idx].unit;
+    delete draftActivities[idx].max;
+  } else {
+    draftActivities[idx].type='number';
+    draftActivities[idx].goalType=val==='number_over'?'over':'under';
+    if(!draftActivities[idx].goal) draftActivities[idx].goal=30;
+    if(!draftActivities[idx].unit) draftActivities[idx].unit='mins';
+    if(!draftActivities[idx].max) draftActivities[idx].max=500;
+  }
+  renderActivityEditor();
+};
+
+window.addActivity=()=>{
+  if(draftActivities.length>=7) return;
+  const idx=draftActivities.length;
+  draftActivities.push({
+    id: makeActivityId('activity_'+idx),
+    label:'New Activity',
+    icon: EMOJI_OPTIONS[idx % EMOJI_OPTIONS.length],
+    color: ACTIVITY_COLORS[idx % ACTIVITY_COLORS.length],
+    type:'check'
+  });
+  renderActivityEditor();
+};
+
+window.removeActivity=(idx)=>{
+  if(draftActivities.length<=3) return;
+  draftActivities.splice(idx,1);
+  renderActivityEditor();
+};
+
+window.goToStep2=()=>{
+  // Validate
+  const valid = draftActivities.every(a=>a.label && a.label.trim().length > 0);
+  if(!valid){ alert('Please give each activity a name.'); return; }
+  document.getElementById('setup-step-1').style.display='none';
+  document.getElementById('setup-step-2').style.display='block';
+};
+
+window.backToStep1=()=>{
+  document.getElementById('setup-step-2').style.display='none';
+  document.getElementById('setup-step-1').style.display='block';
+};
+
+function showSetup(editActivitiesFirst=false){
+  // Populate draft from current ACTIVITIES
+  draftActivities = ACTIVITIES.map(a=>({...a}));
+  renderActivityEditor();
   document.getElementById('start-date-input').value=todayStr();
   document.getElementById('setup-screen').style.display='flex';
+  if(editActivitiesFirst){
+    document.getElementById('setup-step-1').style.display='block';
+    document.getElementById('setup-step-2').style.display='none';
+  } else {
+    document.getElementById('setup-step-1').style.display='none';
+    document.getElementById('setup-step-2').style.display='block';
+  }
 }
 
 window.onSetupToday=()=>{
@@ -342,12 +490,74 @@ window.onSetupConfirm=async()=>{
   document.getElementById('setup-error').style.display='none';
   startDate=val;
   document.getElementById('setup-screen').style.display='none';
-  // make sure days is initialized
-  if(!days || Object.keys(days).length===0) days=initDays(null);
+
+  if(window._dateChangeOnly){
+    // Only update start date, keep existing days & activities
+    window._dateChangeOnly=false;
+    try{
+      await setDoc(doc(db,'users',currentUID),{startDate},{merge:true});
+      showToast('save');
+    } catch(e){ showToast('error'); }
+    updateHeader(); renderGrid();
+    return;
+  }
+
+  // Apply drafted activities
+  ACTIVITIES = draftActivities.map((a,i)=>({
+    ...a,
+    id: a.id || makeActivityId(a.label),
+    color: ACTIVITY_COLORS[i % ACTIVITY_COLORS.length],
+    label: a.label.trim() || 'Activity '+(i+1)
+  }));
+
+  days=initDays(null);
   try{
-    await setDoc(doc(db,'users',currentUID),{days,startDate},{merge:true});
+    await setDoc(doc(db,'users',currentUID),{days,startDate,activities:ACTIVITIES},{merge:false});
   } catch(e){ console.error('Setup save error:',e); }
+  updateSubtitle();
   updateHeader(); renderGrid(); renderLegend();
+};
+
+// ── Settings Modal ────────────────────────────────────────────────────────
+function updateSubtitle(){
+  const el=document.getElementById('activities-subtitle');
+  if(el) el.textContent=ACTIVITIES.map(a=>a.label).join(' · ');
+}
+
+window.showSettingsModal=()=>{
+  document.getElementById('current-start-display').textContent=fmtDate(startDate);
+  document.getElementById('settings-modal').style.display='flex';
+};
+window.closeSettingsModal=()=>{
+  document.getElementById('settings-modal').style.display='none';
+};
+window.onChangeDate=()=>{
+  closeSettingsModal();
+  // Show date step only
+  draftActivities=ACTIVITIES.map(a=>({...a}));
+  document.getElementById('start-date-input').value=startDate||todayStr();
+  document.getElementById('setup-screen').style.display='flex';
+  document.getElementById('setup-step-1').style.display='none';
+  document.getElementById('setup-step-2').style.display='block';
+  // Override confirm to only save date, not reset days
+  window._dateChangeOnly=true;
+};
+window.onRestartChallenge=()=>{
+  if(!confirm('This will reset ALL progress. Are you sure?')) return;
+  closeSettingsModal();
+  days=initDays(null);
+  draftActivities=ACTIVITIES.map(a=>({...a}));
+  document.getElementById('start-date-input').value=todayStr();
+  document.getElementById('setup-screen').style.display='flex';
+  document.getElementById('setup-step-1').style.display='none';
+  document.getElementById('setup-step-2').style.display='block';
+  window._dateChangeOnly=false;
+};
+window.onEditActivities=()=>{
+  if(!confirm('Editing activities will reset ALL progress. Are you sure?')) return;
+  closeSettingsModal();
+  showSetup(true);
+  window._dateChangeOnly=false;
 };
 
 // ── Auth ──────────────────────────────────────────────────────────────────
@@ -394,8 +604,13 @@ onAuthStateChanged(auth, async user=>{
     if(saved && saved.startDate){
       // Returning user — new structure
       startDate=saved.startDate;
+      if(saved.activities && Array.isArray(saved.activities) && saved.activities.length >= 3){
+        ACTIVITIES = saved.activities;
+      }
       days=initDays(saved.days || null);
       isLoading=false;
+      document.getElementById('settings-btn').style.display='block';
+      updateSubtitle();
       updateHeader(); renderGrid(); renderLegend();
 
     } else if(saved && !saved.startDate && saved.days){
@@ -453,6 +668,7 @@ function updateHeader(){
   document.getElementById('stat-done').textContent=done+'/'+total;
   document.getElementById('stat-perfect').textContent=perfectDays();
   document.getElementById('main-bar').style.width=pct+'%';
+  document.getElementById('settings-btn').style.display='block';
 
   if(today===null){
     const t=new Date(); t.setHours(0,0,0,0);
