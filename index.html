@@ -37,8 +37,6 @@ input,textarea,button{font-family:Georgia,serif}
 #save-indicator.show{opacity:1}
 #error-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#E63946;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity 0.3s;z-index:50;pointer-events:none;white-space:nowrap}
 #error-toast.show{opacity:1}
-
-/* Setup screen */
 #setup-screen{position:fixed;inset:0;background:#0F0E11;z-index:190;display:none;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
 .setup-box{max-width:360px;width:100%;text-align:center}
 .date-input{width:100%;background:#0F0E11;border:1px solid #3a3550;border-radius:10px;color:#F5F0E8;padding:13px 16px;font-size:16px;outline:none;font-family:Georgia,serif;text-align:center;margin-bottom:8px}
@@ -71,7 +69,7 @@ input,textarea,button{font-family:Georgia,serif}
   </div>
 </div>
 
-<!-- Setup Screen (shown only on first login) -->
+<!-- Setup Screen -->
 <div id="setup-screen">
   <div class="setup-box">
     <div style="font-size:48px;margin-bottom:16px">📅</div>
@@ -92,7 +90,7 @@ input,textarea,button{font-family:Georgia,serif}
   </div>
 </div>
 
-<!-- Save / Error Toasts -->
+<!-- Toasts -->
 <div id="save-indicator">✓ Saved to cloud</div>
 <div id="error-toast">⚠ Save failed — check connection</div>
 
@@ -138,11 +136,11 @@ input,textarea,button{font-family:Georgia,serif}
 </div>
 
 <script type="module">
-import { initializeApp }     from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
-                             from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+                          from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc }
-                             from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+                          from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 // ── Firebase ──────────────────────────────────────────────────────────────
 const firebaseApp = initializeApp({
@@ -195,13 +193,13 @@ let days        = {};
 let activeDay   = null;
 let editingNote = null;
 let currentUID  = null;
-let startDate   = null; // user's personal start date
+let startDate   = null;
 let saveTimer   = null;
 let isLoading   = false;
 
-function blankDay() { return Object.fromEntries(ACTIVITIES.map(a=>[a.id,{done:false,note:'',value:''}])); }
-function initDays(saved) {
-  const d = {};
+function blankDay(){ return Object.fromEntries(ACTIVITIES.map(a=>[a.id,{done:false,note:'',value:''}])); }
+function initDays(saved){
+  const d={};
   for(let i=1;i<=TOTAL_DAYS;i++){
     const blank=blankDay();
     if(saved&&saved[i]){ for(const act of ACTIVITIES) d[i][act.id]={...blank[act.id],...(saved[i][act.id]||{})}; }
@@ -211,64 +209,66 @@ function initDays(saved) {
 }
 
 // ── Date Helpers ──────────────────────────────────────────────────────────
-function getToday() {
+function getToday(){
   if(!startDate) return null;
   const t=new Date(); t.setHours(0,0,0,0);
   const s=new Date(startDate); s.setHours(0,0,0,0);
-  const diff = Math.floor((t-s)/864e5)+1;
-  if(diff < 1) return null;  // challenge hasn't started yet
-  if(diff > TOTAL_DAYS) return null; // challenge is over
+  const diff=Math.floor((t-s)/864e5)+1;
+  if(diff<1) return null;   // not started yet
+  if(diff>TOTAL_DAYS) return null; // finished
   return diff;
 }
-function dayLabel(n) {
+function dayLabel(n){
   if(!startDate) return '';
   const d=new Date(startDate); d.setDate(d.getDate()+n-1);
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
-function endDateLabel() {
+function fmtDate(dateStr){
+  if(!dateStr) return '';
+  const d=new Date(dateStr);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function endDateStr(){
   if(!startDate) return '';
   const d=new Date(startDate); d.setDate(d.getDate()+TOTAL_DAYS-1);
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 }
-function startDateLabel() {
-  if(!startDate) return '';
-  const d=new Date(startDate);
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-}
-function todayStr() {
+function todayStr(){
   const t=new Date();
   return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
 }
-
-// ── Firestore ─────────────────────────────────────────────────────────────
-async function loadFromFirestore(uid) {
-  try {
-    const snap=await getDoc(doc(db,'users',uid));
-    return snap.exists() ? snap.data() : null;
-  } catch(e){ console.error('Load error:',e); return null; }
+function isFutureDay(n){
+  if(!startDate) return false;
+  const t=new Date(); t.setHours(0,0,0,0);
+  const d=new Date(startDate); d.setDate(d.getDate()+n-1); d.setHours(0,0,0,0);
+  return d>t;
 }
 
-function schedSave() {
+// ── Firestore ─────────────────────────────────────────────────────────────
+async function loadFromFirestore(uid){
+  try{ const snap=await getDoc(doc(db,'users',uid)); return snap.exists()?snap.data():null; }
+  catch(e){ console.error('Load error:',e); return null; }
+}
+function schedSave(){
   if(!currentUID) return;
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async()=>{
     if(!currentUID) return;
-    try {
-      await setDoc(doc(db,'users',currentUID),{days, startDate},{merge:true});
+    try{
+      await setDoc(doc(db,'users',currentUID),{days,startDate},{merge:true});
       showToast('save');
     } catch(e){ console.error('Save error:',e); showToast('error'); }
   },800);
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────
-function showToast(type) {
+// ── Toasts ────────────────────────────────────────────────────────────────
+function showToast(type){
   const el=document.getElementById(type==='save'?'save-indicator':'error-toast');
-  el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2000);
+  el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2000);
 }
 
-// ── Reset ─────────────────────────────────────────────────────────────────
-function resetUI() {
+// ── Reset / Loading ───────────────────────────────────────────────────────
+function resetUI(){
   clearTimeout(saveTimer);
   days={}; activeDay=null; editingNote=null; currentUID=null; startDate=null; isLoading=false;
   document.getElementById('day-grid').innerHTML       = '';
@@ -285,54 +285,43 @@ function resetUI() {
   document.getElementById('signout-btn').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'none';
 }
-
-function showLoading() {
+function showLoading(){
   isLoading=true;
   document.getElementById('day-grid').innerHTML=
     '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:40px"><div class="spinner"></div></div>';
 }
 
 // ── Setup Screen ──────────────────────────────────────────────────────────
-function showSetup() {
-  // Pre-fill date input with today
-  document.getElementById('start-date-input').value = todayStr();
-  document.getElementById('setup-screen').style.display = 'flex';
+function showSetup(){
+  document.getElementById('start-date-input').value=todayStr();
+  document.getElementById('setup-screen').style.display='flex';
 }
-
-window.onSetupToday = () => {
-  document.getElementById('start-date-input').value = todayStr();
-  onSetupConfirm();
-};
-
-window.onSetupConfirm = async () => {
-  const val = document.getElementById('start-date-input').value;
+window.onSetupToday=()=>{ document.getElementById('start-date-input').value=todayStr(); onSetupConfirm(); };
+window.onSetupConfirm=async()=>{
+  const val=document.getElementById('start-date-input').value;
   if(!val){ document.getElementById('setup-error').style.display='block'; return; }
   document.getElementById('setup-error').style.display='none';
-  startDate = val; // store as YYYY-MM-DD string
+  startDate=val;
   document.getElementById('setup-screen').style.display='none';
-  days = initDays(null);
-  // Save start date to Firestore
-  await setDoc(doc(db,'users',currentUID),{days, startDate},{merge:true});
-  updateHeader();
-  renderGrid();
-  renderLegend();
+  if(!Object.keys(days).length) days=initDays(null);
+  await setDoc(doc(db,'users',currentUID),{days,startDate},{merge:true});
+  updateHeader(); renderGrid(); renderLegend();
 };
 
 // ── Auth ──────────────────────────────────────────────────────────────────
-window.signInWithGoogle = async () => {
+window.signInWithGoogle=async()=>{
   const btn=document.getElementById('google-btn');
   btn.disabled=true;
   document.getElementById('login-spinner').style.display='flex';
   document.getElementById('login-status').textContent='Signing in...';
-  try { await signInWithPopup(auth,provider); }
+  try{ await signInWithPopup(auth,provider); }
   catch(e){
     console.error(e); btn.disabled=false;
     document.getElementById('login-spinner').style.display='none';
     document.getElementById('login-status').textContent='⚠ Sign in failed. Please try again.';
   }
 };
-
-window.signOut = async () => {
+window.signOut=async()=>{
   clearTimeout(saveTimer); currentUID=null;
   resetUI();
   document.getElementById('login-screen').style.display='flex';
@@ -342,7 +331,7 @@ window.signOut = async () => {
   await fbSignOut(auth);
 };
 
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth,async user=>{
   if(user){
     resetUI(); showLoading();
     document.getElementById('login-screen').style.display='none';
@@ -353,23 +342,33 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('google-btn').disabled=false;
     document.getElementById('login-spinner').style.display='none';
 
-    // Load user data
-    const saved = await loadFromFirestore(user.uid);
-    currentUID  = user.uid;
+    const saved=await loadFromFirestore(user.uid);
+    currentUID=user.uid;
 
-    if(saved && saved.startDate){
-      // Returning user — load their data
-      startDate = saved.startDate;
-      days      = initDays(saved.days||null);
-      isLoading = false;
-      updateHeader();
-      renderGrid();
-      renderLegend();
+    if(saved&&saved.startDate){
+      // ✅ New structure — has startDate + days
+      startDate=saved.startDate;
+      days=initDays(saved.days||null);
+      isLoading=false;
+      updateHeader(); renderGrid(); renderLegend();
+    } else if(saved&&!saved.startDate&&saved.days){
+      // ✅ Mid-migration — has days but no startDate
+      days=initDays(saved.days);
+      isLoading=false;
+      document.getElementById('day-grid').innerHTML='';
+      showSetup();
+    } else if(saved&&!saved.startDate&&!saved.days){
+      // ✅ Old structure — days saved as top-level keys ("1","2"...)
+      const hasDayKeys=Object.keys(saved).some(k=>!isNaN(k)&&parseInt(k)>=1&&parseInt(k)<=21);
+      days=hasDayKeys?initDays(saved):initDays(null);
+      isLoading=false;
+      document.getElementById('day-grid').innerHTML='';
+      showSetup();
     } else {
-      // New user — show setup screen to pick start date
-      days      = {};
-      isLoading = false;
-      document.getElementById('day-grid').innerHTML = '';
+      // ✅ Brand new user
+      days=initDays(null);
+      isLoading=false;
+      document.getElementById('day-grid').innerHTML='';
       showSetup();
     }
   } else {
@@ -383,49 +382,47 @@ function completion(day){ return ACTIVITIES.filter(a=>days[day]&&days[day][a.id]
 function totalDone(){ let c=0; for(let i=1;i<=TOTAL_DAYS;i++) ACTIVITIES.forEach(a=>{if(days[i]&&days[i][a.id]&&days[i][a.id].done)c++;}); return c; }
 function perfectDays(){ let c=0; for(let i=1;i<=TOTAL_DAYS;i++) if(completion(i)===ACTIVITIES.length)c++; return c; }
 
-// ── DOM Updates ───────────────────────────────────────────────────────────
+// ── Header ────────────────────────────────────────────────────────────────
 function updateHeader(){
   const today=getToday(), done=totalDone(), total=TOTAL_DAYS*ACTIVITIES.length, pct=Math.round((done/total)*100);
-  document.getElementById('challenge-dates').textContent = `${startDateLabel()} – ${endDateLabel()}`;
-
-  // Show appropriate message based on challenge status
-  if(today === null){
+  document.getElementById('challenge-dates').textContent=`${fmtDate(startDate)} – ${endDateStr()}`;
+  if(today===null){
     const t=new Date(); t.setHours(0,0,0,0);
     const s=new Date(startDate); s.setHours(0,0,0,0);
-    const diff = Math.floor((t-s)/864e5)+1;
-    if(diff < 1){
-      // Future start
-      const daysLeft = Math.abs(diff)+1;
-      document.getElementById('day-label').textContent = 'CHALLENGE NOT STARTED YET';
-      document.getElementById('day-msg').textContent   = `Your challenge begins on ${startDateLabel()}. ${daysLeft} day${daysLeft>1?'s':''} to go! Get ready! 🚀`;
+    const diff=Math.floor((t-s)/864e5)+1;
+    if(diff<1){
+      const daysLeft=Math.abs(diff)+1;
+      document.getElementById('day-label').textContent='CHALLENGE NOT STARTED YET';
+      document.getElementById('day-msg').textContent=`Your challenge begins on ${fmtDate(startDate)}. ${daysLeft} day${daysLeft>1?'s':''} to go — get ready! 🚀`;
     } else {
-      // Challenge completed
-      document.getElementById('day-label').textContent = 'CHALLENGE COMPLETE 🏅';
-      document.getElementById('day-msg').textContent   = 'You completed your 21-day challenge! What an achievement!';
+      document.getElementById('day-label').textContent='CHALLENGE COMPLETE 🏅';
+      document.getElementById('day-msg').textContent='You completed your 21-day challenge! Incredible achievement!';
     }
   } else {
-    document.getElementById('day-label').textContent = `DAY ${today} · ${dayLabel(today).toUpperCase()}`;
-    document.getElementById('day-msg').textContent   = MESSAGES[today];
+    document.getElementById('day-label').textContent=`DAY ${today} · ${dayLabel(today).toUpperCase()}`;
+    document.getElementById('day-msg').textContent=MESSAGES[today];
   }
-
-  document.getElementById('stat-pct').textContent        = pct+'%';
-  document.getElementById('stat-done').textContent       = done+'/'+total;
-  document.getElementById('stat-perfect').textContent    = perfectDays();
-  document.getElementById('main-bar').style.width        = pct+'%';
+  document.getElementById('stat-pct').textContent=pct+'%';
+  document.getElementById('stat-done').textContent=done+'/'+total;
+  document.getElementById('stat-perfect').textContent=perfectDays();
+  document.getElementById('main-bar').style.width=pct+'%';
 }
 
+// ── Day Card ──────────────────────────────────────────────────────────────
 function updateDayCard(day){
   const el=document.getElementById('day-'+day); if(!el) return;
   const today=getToday(), done=completion(day), full=done===ACTIVITIES.length;
-  const isActive=activeDay===day, isToday=day===today;
+  const isActive=activeDay===day, isToday=day===today, future=isFutureDay(day);
   el.style.background  = isActive?'linear-gradient(135deg,#2a1f45,#1a2a3a)':full?'#1e1535':'#1a1825';
   el.style.borderColor = isActive?'#7B5EA7':isToday?'#F4A261':full?'rgba(123,94,167,0.4)':'#2a2535';
   el.style.transform   = isActive?'scale(1.06)':'scale(1)';
+  el.style.opacity     = future?'0.4':'1';
   const dotWrap=el.querySelector('.dots');
   if(dotWrap) ACTIVITIES.forEach((a,i)=>{ if(dotWrap.children[i]) dotWrap.children[i].style.background=days[day]&&days[day][a.id]&&days[day][a.id].done?a.color:'#2a2535'; });
   const star=el.querySelector('.star'); if(star) star.style.display=full?'block':'none';
 }
 
+// ── Activity Card ─────────────────────────────────────────────────────────
 function updateActivityCard(actId){
   if(!activeDay||!days[activeDay]) return;
   const act=ACTIVITIES.find(a=>a.id===actId), d=days[activeDay][actId];
@@ -442,26 +439,21 @@ function updateActivityCard(actId){
   const bar=card.querySelector('.bar-fill'), pct=d.value?Math.min(100,Math.round((n/act.max)*100)):0;
   if(bar){bar.style.width=Math.min(pct,100)+'%';bar.style.background=met?act.color:(act.goalType==='under'?'#E63946':'#3a3550');}
   const left=card.querySelector('.bar-left'), right=card.querySelector('.bar-right');
-  if(left)  left.textContent  = d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—';
-  if(right) right.style.color = met?act.color:'#6B6180';
+  if(left)  left.textContent =d.value!==''&&!isNaN(n)?n.toLocaleString()+' '+act.unit:'—';
+  if(right) right.style.color=met?act.color:'#6B6180';
   const emo=card.querySelector('.met-emoji'); if(emo) emo.style.display=met?'inline':'none';
 }
 
-// ── Render ────────────────────────────────────────────────────────────────
+// ── Render Grid ───────────────────────────────────────────────────────────
 function renderGrid(){
   const today=getToday(), grid=document.getElementById('day-grid');
   grid.innerHTML='';
   for(let day=1;day<=TOTAL_DAYS;day++){
-    const done=completion(day), full=done===ACTIVITIES.length, isToday=day===today;
-    // Days in the future (beyond today) are dimmed
-    const t=new Date(); t.setHours(0,0,0,0);
-    const s=new Date(startDate); s.setHours(0,0,0,0);
-    const dayDate=new Date(s); dayDate.setDate(dayDate.getDate()+day-1);
-    const isFuture = dayDate > t;
+    const done=completion(day), full=done===ACTIVITIES.length;
+    const isToday=day===today, future=isFutureDay(day);
     const btn=document.createElement('button');
-    btn.className='day-btn day-card'; btn.id='day-'+day;
-    btn.onclick=()=>onDayClick(day);
-    btn.style.opacity = isFuture ? '0.4' : '1';
+    btn.className='day-btn day-card'; btn.id='day-'+day; btn.onclick=()=>onDayClick(day);
+    btn.style.opacity=future?'0.4':'1';
     btn.innerHTML=`
       <div style="font-size:9px;color:${isToday?'#F4A261':'#5a5575'};letter-spacing:1px;margin-bottom:3px">${isToday?'TODAY':dayLabel(day)}</div>
       <div style="font-size:19px;font-weight:bold;line-height:1">${day}</div>
@@ -473,6 +465,7 @@ function renderGrid(){
   }
 }
 
+// ── Render Legend ─────────────────────────────────────────────────────────
 function renderLegend(){
   document.getElementById('legend').innerHTML=ACTIVITIES.map(a=>`
     <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#6B6180">
@@ -480,6 +473,7 @@ function renderLegend(){
     </div>`).join('');
 }
 
+// ── Render Detail ─────────────────────────────────────────────────────────
 function renderDetail(){
   const panel=document.getElementById('detail-panel');
   if(!activeDay){panel.innerHTML='';return;}
@@ -502,6 +496,7 @@ function renderDetail(){
     </div>`;
 }
 
+// ── Render Card ───────────────────────────────────────────────────────────
 function renderCard(act,day){
   if(!days[day]) return '';
   const d=days[day][act.id]||{done:false,note:'',value:''};
@@ -542,20 +537,20 @@ function renderCard(act,day){
 }
 
 // ── Event Handlers ────────────────────────────────────────────────────────
-window.onDayClick = day => {
+window.onDayClick=day=>{
   if(isLoading||!days[day]) return;
   const prev=activeDay; activeDay=(activeDay===day)?null:day; editingNote=null;
   if(prev) updateDayCard(prev); updateDayCard(day); renderDetail();
   if(activeDay) setTimeout(()=>document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'}),50);
 };
-window.onCloseDetail = () => { const prev=activeDay; activeDay=null; editingNote=null; if(prev) updateDayCard(prev); renderDetail(); };
-window.onCheck = actId => {
+window.onCloseDetail=()=>{ const prev=activeDay; activeDay=null; editingNote=null; if(prev) updateDayCard(prev); renderDetail(); };
+window.onCheck=actId=>{
   if(!activeDay||!currentUID||!days[activeDay]) return;
   days[activeDay][actId].done=!days[activeDay][actId].done;
   schedSave(); updateActivityCard(actId); updateDayCard(activeDay); updateHeader();
   if(ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
 };
-window.onValChange = (actId,val) => {
+window.onValChange=(actId,val)=>{
   if(!activeDay||!currentUID||!days[activeDay]) return;
   const act=ACTIVITIES.find(a=>a.id===actId), n=parseInt(val);
   const done=val!==''&&!isNaN(n)&&(act.goalType==='over'?n>=act.goal:n<=act.goal);
@@ -563,7 +558,7 @@ window.onValChange = (actId,val) => {
   schedSave(); updateActivityCard(actId); updateDayCard(activeDay); updateHeader();
   if(ACTIVITIES.every(a=>days[activeDay][a.id].done)) showCelebration();
 };
-window.onEditNote = actId => {
+window.onEditNote=actId=>{
   if(!activeDay||isLoading) return;
   editingNote=actId;
   const wrap=document.getElementById('cards-wrap');
@@ -571,7 +566,7 @@ window.onEditNote = actId => {
   const ta=document.getElementById('note-ta-'+actId);
   if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}
 };
-window.onSaveNote = actId => {
+window.onSaveNote=actId=>{
   if(!activeDay||!currentUID) return;
   const ta=document.getElementById('note-ta-'+actId);
   if(ta) days[activeDay][actId].note=ta.value;
@@ -579,13 +574,13 @@ window.onSaveNote = actId => {
   const wrap=document.getElementById('cards-wrap');
   if(wrap) wrap.innerHTML=ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
 };
-window.onCancelNote = () => {
+window.onCancelNote=()=>{
   editingNote=null;
   const wrap=document.getElementById('cards-wrap');
   if(wrap) wrap.innerHTML=ACTIVITIES.map(a=>renderCard(a,activeDay)).join('');
 };
-window.showCelebration = () => { document.getElementById('celebration').classList.add('show'); setTimeout(hideCelebration,3500); };
-window.hideCelebration = () => { document.getElementById('celebration').classList.remove('show'); };
+window.showCelebration=()=>{ document.getElementById('celebration').classList.add('show'); setTimeout(hideCelebration,3500); };
+window.hideCelebration=()=>{ document.getElementById('celebration').classList.remove('show'); };
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/challenge/sw.js');
 </script>
