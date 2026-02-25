@@ -389,33 +389,56 @@ function renderActivityEditor(){
   document.getElementById('act-count-msg').textContent = `${count} of 3–7 activities`;
 
   list.innerHTML = draftActivities.map((act, idx) => `
-    <div style="background:#0f0e11;border:1px solid #2a2535;border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="background:#0f0e11;border:1px solid #2a2535;border-radius:10px;padding:12px;margin-bottom:10px" data-act-idx="${idx}">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-        <select onchange="draftActivities[${idx}].icon=this.value" style="background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px;font-size:18px;width:54px;cursor:pointer">
+        <select data-field="icon" data-idx="${idx}" style="background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px;font-size:18px;width:54px;cursor:pointer">
           ${EMOJI_OPTIONS.map(e=>`<option value="${e}" ${act.icon===e?'selected':''}>${e}</option>`).join('')}
         </select>
-        <input type="text" value="${act.label}" maxlength="25" placeholder="Activity name"
-          oninput="draftActivities[${idx}].label=this.value"
+        <input type="text" value="${act.label.replace(/"/g,'&quot;')}" maxlength="25" placeholder="Activity name"
+          data-field="label" data-idx="${idx}"
           style="flex:1;background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:8px 10px;font-size:14px;outline:none;font-family:Georgia,serif"/>
-        ${count > 3 ? `<button onclick="removeActivity(${idx})" style="background:#2a2535;border:none;border-radius:6px;color:#E63946;padding:6px 10px;cursor:pointer;font-size:14px">✕</button>` : ''}
+        ${count > 3 ? `<button data-action="remove" data-idx="${idx}" style="background:#2a2535;border:none;border-radius:6px;color:#E63946;padding:6px 10px;cursor:pointer;font-size:14px">✕</button>` : ''}
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select onchange="onDraftTypeChange(${idx},this.value)" style="background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px 8px;font-size:12px;cursor:pointer">
+        <select data-field="type" data-idx="${idx}" style="background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px 8px;font-size:12px;cursor:pointer">
           <option value="check" ${act.type==='check'?'selected':''}>✅ Checkbox</option>
           <option value="number_over" ${act.type==='number'&&act.goalType==='over'?'selected':''}>📈 At least</option>
           <option value="number_under" ${act.type==='number'&&act.goalType==='under'?'selected':''}>📉 At most</option>
         </select>
         ${act.type==='number'?`
-          <input type="number" value="${act.goal}" min="1" placeholder="Goal" oninput="draftActivities[${idx}].goal=+this.value"
+          <input type="number" value="${act.goal}" min="1" placeholder="Goal"
+            data-field="goal" data-idx="${idx}"
             style="width:80px;background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px 8px;font-size:12px;outline:none;font-family:Georgia,serif"/>
-          <input type="text" value="${act.unit}" maxlength="8" placeholder="unit" oninput="draftActivities[${idx}].unit=this.value"
+          <input type="text" value="${act.unit||''}" maxlength="8" placeholder="unit"
+            data-field="unit" data-idx="${idx}"
             style="width:64px;background:#1a1825;border:1px solid #3a3550;border-radius:8px;color:#F5F0E8;padding:6px 8px;font-size:12px;outline:none;font-family:Georgia,serif"/>
         `:''}
       </div>
     </div>`).join('');
+
+  // Attach events via delegation on the list element
+  list.oninput = list.onchange = (e)=>{
+    const el = e.target;
+    const idx = el.dataset.idx !== undefined ? +el.dataset.idx : null;
+    if(idx === null || !draftActivities[idx]) return;
+    const field = el.dataset.field;
+    if(field === 'label') draftActivities[idx].label = el.value;
+    else if(field === 'icon') draftActivities[idx].icon = el.value;
+    else if(field === 'goal') draftActivities[idx].goal = +el.value;
+    else if(field === 'unit') draftActivities[idx].unit = el.value;
+    else if(field === 'type') applyDraftTypeChange(idx, el.value);
+  };
+  list.onclick = (e)=>{
+    const btn = e.target.closest('[data-action="remove"]');
+    if(!btn) return;
+    const idx = +btn.dataset.idx;
+    if(draftActivities.length <= 3) return;
+    draftActivities.splice(idx, 1);
+    renderActivityEditor();
+  };
 }
 
-window.onDraftTypeChange=(idx, val)=>{
+function applyDraftTypeChange(idx, val){
   if(val==='check'){
     draftActivities[idx].type='check';
     delete draftActivities[idx].goalType;
@@ -430,7 +453,7 @@ window.onDraftTypeChange=(idx, val)=>{
     if(!draftActivities[idx].max) draftActivities[idx].max=500;
   }
   renderActivityEditor();
-};
+}
 
 window.addActivity=()=>{
   if(draftActivities.length>=7) return;
@@ -442,12 +465,6 @@ window.addActivity=()=>{
     color: ACTIVITY_COLORS[idx % ACTIVITY_COLORS.length],
     type:'check'
   });
-  renderActivityEditor();
-};
-
-window.removeActivity=(idx)=>{
-  if(draftActivities.length<=3) return;
-  draftActivities.splice(idx,1);
   renderActivityEditor();
 };
 
