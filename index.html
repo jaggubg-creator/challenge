@@ -137,7 +137,7 @@ input,textarea,button{font-family:Georgia,serif}
 
 <script type="module">
 import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut as fbSignOut }
                           from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc }
                           from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
@@ -155,7 +155,10 @@ const auth     = getAuth(firebaseApp);
 const db       = getFirestore(firebaseApp);
 const provider = new GoogleAuthProvider();
 
-// ── Constants ─────────────────────────────────────────────────────────────
+// Handle redirect result on page load
+getRedirectResult(auth).catch(e => console.error('Redirect error:', e));
+
+
 const TOTAL_DAYS = 21;
 const ACTIVITIES = [
   {id:'mindfulness',label:'Meditation',      icon:'🧘',color:'#7B5EA7',type:'number',goal:20,  unit:'mins', max:120,  goalType:'over'},
@@ -313,9 +316,10 @@ window.signInWithGoogle=async()=>{
   const btn=document.getElementById('google-btn');
   btn.disabled=true;
   document.getElementById('login-spinner').style.display='flex';
-  document.getElementById('login-status').textContent='Signing in...';
-  try{ await signInWithPopup(auth,provider); }
-  catch(e){
+  document.getElementById('login-status').textContent='Redirecting to Google...';
+  try{
+    await signInWithRedirect(auth, provider);
+  } catch(e){
     console.error(e); btn.disabled=false;
     document.getElementById('login-spinner').style.display='none';
     document.getElementById('login-status').textContent='⚠ Sign in failed. Please try again.';
@@ -342,32 +346,46 @@ onAuthStateChanged(auth,async user=>{
     document.getElementById('google-btn').disabled=false;
     document.getElementById('login-spinner').style.display='none';
 
-    const saved=await loadFromFirestore(user.uid);
-    currentUID=user.uid;
+    let saved = null;
+    try {
+      saved = await loadFromFirestore(user.uid);
+      console.log('Loaded from Firestore:', JSON.stringify(saved).substring(0,200));
+    } catch(e) {
+      console.error('Firestore load failed:', e);
+      document.getElementById('day-grid').innerHTML =
+        `<div style="grid-column:1/-1;text-align:center;padding:30px;color:#E63946;font-size:13px">
+          ⚠ Could not load your data. Please check your internet connection and refresh.
+        </div>`;
+      return;
+    }
 
-    if(saved&&saved.startDate){
-      // ✅ New structure — has startDate + days
-      startDate=saved.startDate;
-      days=initDays(saved.days||null);
-      isLoading=false;
+    currentUID = user.uid;
+    console.log('currentUID set:', currentUID);
+
+    if(saved && saved.startDate){
+      console.log('Case 1: returning user with startDate');
+      startDate = saved.startDate;
+      days = initDays(saved.days || null);
+      isLoading = false;
       updateHeader(); renderGrid(); renderLegend();
-    } else if(saved&&!saved.startDate&&saved.days){
-      // ✅ Mid-migration — has days but no startDate
-      days=initDays(saved.days);
-      isLoading=false;
+    } else if(saved && !saved.startDate && saved.days){
+      console.log('Case 2: has days but no startDate');
+      days = initDays(saved.days);
+      isLoading = false;
       document.getElementById('day-grid').innerHTML='';
       showSetup();
-    } else if(saved&&!saved.startDate&&!saved.days){
-      // ✅ Old structure — days saved as top-level keys ("1","2"...)
-      const hasDayKeys=Object.keys(saved).some(k=>!isNaN(k)&&parseInt(k)>=1&&parseInt(k)<=21);
-      days=hasDayKeys?initDays(saved):initDays(null);
-      isLoading=false;
+    } else if(saved && !saved.startDate && !saved.days){
+      console.log('Case 3: old structure check');
+      const hasDayKeys = Object.keys(saved).some(k=>!isNaN(k)&&parseInt(k)>=1&&parseInt(k)<=21);
+      console.log('hasDayKeys:', hasDayKeys);
+      days = hasDayKeys ? initDays(saved) : initDays(null);
+      isLoading = false;
       document.getElementById('day-grid').innerHTML='';
       showSetup();
     } else {
-      // ✅ Brand new user
-      days=initDays(null);
-      isLoading=false;
+      console.log('Case 4: brand new user');
+      days = initDays(null);
+      isLoading = false;
       document.getElementById('day-grid').innerHTML='';
       showSetup();
     }
