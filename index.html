@@ -203,8 +203,12 @@ function initDays(saved){
   const d={};
   for(let i=1;i<=TOTAL_DAYS;i++){
     const blank=blankDay();
-    if(saved&&saved[i]){ for(const act of ACTIVITIES) d[i][act.id]={...blank[act.id],...(saved[i][act.id]||{})}; }
-    else d[i]=blank;
+    d[i]=blank; // always initialize first
+    if(saved&&saved[i]){
+      for(const act of ACTIVITIES){
+        d[i][act.id]={...blank[act.id],...(saved[i][act.id]||{})};
+      }
+    }
   }
   return d;
 }
