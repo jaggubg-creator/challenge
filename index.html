@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#0F0E11"/>
@@ -137,7 +138,7 @@ input,textarea,button{font-family:Georgia,serif}
 
 <script type="module">
 import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut as fbSignOut }
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
                           from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc }
                           from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
@@ -154,9 +155,6 @@ const firebaseApp = initializeApp({
 const auth     = getAuth(firebaseApp);
 const db       = getFirestore(firebaseApp);
 const provider = new GoogleAuthProvider();
-
-// Handle redirect result on page load
-getRedirectResult(auth).catch(e => console.error('Redirect error:', e));
 
 
 const TOTAL_DAYS = 21;
@@ -316,10 +314,9 @@ window.signInWithGoogle=async()=>{
   const btn=document.getElementById('google-btn');
   btn.disabled=true;
   document.getElementById('login-spinner').style.display='flex';
-  document.getElementById('login-status').textContent='Redirecting to Google...';
-  try{
-    await signInWithRedirect(auth, provider);
-  } catch(e){
+  document.getElementById('login-status').textContent='Signing in...';
+  try{ await signInWithPopup(auth,provider); }
+  catch(e){
     console.error(e); btn.disabled=false;
     document.getElementById('login-spinner').style.display='none';
     document.getElementById('login-status').textContent='⚠ Sign in failed. Please try again.';
